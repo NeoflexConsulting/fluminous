@@ -1,2 +1,2 @@
-# akka-serverless-workflow
-Serverless workflow на базе Akka
+# Flumen
+Akka based serverless workflow DSL.
