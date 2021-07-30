@@ -1,2 +1,2 @@
 # Flumen
-Akka based serverless workflow DSL.
+Akka-based serverless workflow DSL.
