@@ -1,14 +1,41 @@
 package ru.neoflex.flumen
 
-sealed trait ContrServiceList[A]
+import scala.reflect.ClassTag
 
-sealed class ContrNil[A] extends ContrServiceList[A]
+class NotFoundException extends Exception
+
+// TODO Implement Contains and Unique typeclasses
+
+case class Evidence[F](className: String)
+
+object Evidence {
+  implicit def evidence[F](implicit classTag: ClassTag[F]):Evidence[F] = new  Evidence[F](classTag.runtimeClass.getName)
+  def isEqual[I,O](evidence1: Evidence[I], evidence2: Evidence[O]): Boolean = evidence1.className == evidence2.className
+}
+
+
+sealed trait ContrServiceList[A] {
+  def getService[I:Evidence, O: Evidence](name: String): Either[NotFoundException, Service[I,O]]
+}
+
+sealed class ContrNil[A] extends ContrServiceList[A] {
+  override def getService[I:Evidence, O: Evidence](name: String): Either[NotFoundException, Service[I,O]] = Left(new NotFoundException)
+}
 
 object ContrNil {
   def apply[A] = new ContrNil[A]
 }
 
 final case class ContrCompose[A, H, T <: ContrServiceList[A]](head : Service[A,H], tail : T) extends ContrServiceList[A] {
+  override def getService[I:Evidence, O: Evidence](name: String): Either[NotFoundException, Service[I,O]] = {
+    if (!head.hasInputType[I]) {
+      Left(new NotFoundException)
+    } else if (!head.hasOutputType[O] || head.name != name) {
+      tail.getService[I,O](name)
+    } else {
+      Right(head.as[I,O])
+    }
+  }
 }
 
 object ContrServiceList{
@@ -54,6 +81,7 @@ object MatrixCompose {
   protected final case class InnerMatrixCompose [H, T <: ServiceMatrix, SCONTR<: ContrServiceList[H], SCOV <: CovServiceList[H]](tail : T,service: Service[H,H], servicesColumn : SCONTR, servicesRow: SCOV ) extends ServiceMatrix {
     type ContrSignature[A] = ContrCompose[A,H,tail.ContrSignature[A]]
     type CovSignature[A] = CovCompose[H,A,tail.CovSignature[A]]
+
     def enlarge[A](service: Service[A,A], servicesColumn : this.ContrSignature[A], servicesRow: this.CovSignature[A]) = {
       MatrixCompose(this)(service,servicesColumn,servicesRow)
     }
