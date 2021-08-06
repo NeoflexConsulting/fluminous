@@ -1,63 +1,65 @@
 package ru.neoflex.flumen
 
-sealed trait HContrFunctionList[A]
-final case class ::=>[A, H, T <: HContrFunctionList[A]](head : A => H, tail : T) extends HContrFunctionList[A] {
+sealed trait ContrServiceList[A]
+final case class ::=>[A, H, T <: ContrServiceList[A]](head : Service[A,H], tail : T) extends ContrServiceList[A] {
 }
-sealed class HContrNil[A] extends HContrFunctionList[A] {
+sealed class ContrNil[A] extends ContrServiceList[A] {
 }
-object HContrNil {
-  def apply[A] = new HContrNil[A]
-}
-
-object HContrFunctionList{
-  def apply[A,H](func: A=> H) = {::=>[A, H,HContrNil[A]](func,  HContrNil[A])}
+object ContrNil {
+  def apply[A] = new ContrNil[A]
 }
 
-
-sealed trait HCovFunctionList[A]
-final case class ::<=[H, A, T <: HCovFunctionList[A]](head : H => A, tail : T) extends HCovFunctionList[A] {
-}
-sealed class HCovNil[A] extends HCovFunctionList[A] {
-}
-
-object HCovNil {
-  def apply[A] = new HCovNil[A]
-}
-
-object HCovFunctionList {
-  def apply[H,A](func: H=>A) ={::<=[H,A,HCovNil[A]](func,HCovNil[A])}
+object ContrServiceList{
+  def apply[A,H](service: Service[A,H]) = {::=>[A, H,ContrNil[A]](service,  ContrNil[A])}
 }
 
 
-
-sealed trait HFunctionMatrix{
-  type ContrSignature[A] <: HContrFunctionList[A]
-  type CovSignature[A] <: HCovFunctionList[A]
-
+sealed trait CovServiceList[A]
+final case class ::<=[H, A, T <: CovServiceList[A]](head : Service[H,A], tail : T) extends CovServiceList[A] {
+}
+sealed class CovNil[A] extends CovServiceList[A] {
 }
 
-final case class ::: [H, T <: HFunctionMatrix](tail : T)(diag: H=>H, column : tail.ContrSignature[H], row: tail.CovSignature[H] ) extends HFunctionMatrix {
+object CovNil {
+  def apply[A] = new CovNil[A]
+}
+
+object CovServiceList {
+  def apply[H,A](service: Service[H,A]) ={::<=[H,A,CovNil[A]](service,CovNil[A])}
+}
+
+
+
+sealed trait ServiceMatrix{
+  type ContrSignature[A] <: ContrServiceList[A]
+  type CovSignature[A] <: CovServiceList[A]
+}
+
+final case class ::: [H, T <: ServiceMatrix](tail : T)(service: Service[H,H], servicesColumn : tail.ContrSignature[H], servicesRow: tail.CovSignature[H] ) extends ServiceMatrix {
   type ContrSignature[A] = ::=>[A,H,tail.ContrSignature[A]]
   type CovSignature[A] = ::<=[H,A,tail.CovSignature[A]]
+  def enlarge[A](service: Service[A,A], servicesColumn : this.ContrSignature[A], servicesRow: this.CovSignature[A]) = {
+    :::(this)(service,servicesColumn,servicesRow)
+  }
 }
 
-object HNilMatrix extends HFunctionMatrix {
-  type ContrSignature[A] = HContrNil[A]
-  type CovSignature[A] = HCovNil[A]
+object NilMatrix extends ServiceMatrix {
+  type ContrSignature[A] = ContrNil[A]
+  type CovSignature[A] = CovNil[A]
 }
 
-object HFunctionMatrix {
-  def apply[W](func: W => W):HFunctionMatrix = {
-    :::(HNilMatrix)(func,HContrNil[W], HCovNil[W])
+object ServiceMatrix {
+  def apply[W](service: Service[W,W]) = {
+    :::(NilMatrix)(service,ContrNil[W], CovNil[W])
   }
 }
 
 
 object Test {
   def main(args: Array[String]): Unit = {
-      val m1 = HFunctionMatrix[String](_.toUpperCase)
-      val l1 = HContrFunctionList[Int, String](_.toString)
-      val l2 = HCovFunctionList[String,Int](_.toInt)
-      val m2 = HFunctionMatrix
+      val m1 = ServiceMatrix[String](Service("upper",_.toUpperCase))
+      val m2 = m1.enlarge[Int](Service("increment",_ + 1),
+        ContrServiceList[Int, String](Service("to_string",_.toString)),
+        CovServiceList[String,Int](Service("to_int",_.toInt)))
   }
 }
