@@ -1,5 +1,7 @@
 package ru.neoflex.flumen
 
+import ru.neoflex.flumen.MatrixCompose.InnerMatrixCompose
+
 import scala.reflect.ClassTag
 
 class NotFoundException extends Exception
@@ -183,6 +185,11 @@ object MatrixGet {
   //Когда у нас M <: ServiceMatrix,I,O и есть implicit ContrGet[M.ContrSignature, I,O]
   //Когда у нас M <: ServiceMatrix,I,O и есть implicit CovGet[M.CovSignature, I,O]
   //Когда у нас M <: ServiceMatrix,M.Diagonal,M.diagonal
+  implicit def selectDiagonal[M <: ServiceMatrix,H, CONTR<: ContrServiceList[H], COV <: CovServiceList[H]]:
+  MatrixGet[InnerMatrixCompose[H,M,CONTR,COV],H,H] =
+    new MatrixGet[InnerMatrixCompose[H,M,CONTR,COV],H,H] {
+      def apply(t : InnerMatrixCompose[H,M,CONTR,COV]):Service[H,H] = t.service
+    }
 
   //И видимо должен быть рекурсивный, перебирающий матрицы
 }
