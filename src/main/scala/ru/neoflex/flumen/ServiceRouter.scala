@@ -202,7 +202,12 @@ object MatrixGet {
       def apply(t : InnerMatrixCompose[H,M,CONTR,COV]):Service[H,H] = t.service
     }
 
-  //И видимо должен быть рекурсивный, перебирающий матрицы
+  //И рекурсивный случай, перебирающий матрицы
+  implicit def recurse[M <: ServiceMatrix,H, CONTR<: ContrServiceList[H], COV <: CovServiceList[H], I,O]
+  (implicit mt : MatrixGet[M, I, O]): MatrixGet[InnerMatrixCompose[H,M,CONTR,COV],I,O] =
+    new MatrixGet[InnerMatrixCompose[H,M,CONTR,COV],I,O] {
+      def apply(t :InnerMatrixCompose[H,M,CONTR,COV]):Service[I,O]  = mt(t.tail)
+    }
 }
 
 
