@@ -181,9 +181,20 @@ trait MatrixGet[M <: ServiceMatrix,I,O] {
 }
 object MatrixGet {
   def apply[M <: ServiceMatrix,I,O](implicit got: MatrixGet[M,I,O]): MatrixGet[M,I,O] = got
-  //У нас должно быть 3 базовых случая
+  //У нас 3 базовых случая
   //Когда у нас M <: ServiceMatrix,I,O и есть implicit ContrGet[M.ContrSignature, I,O]
+  implicit def selectContrvariant[M <: ServiceMatrix,CONTR<: ContrServiceList[I], COV <: CovServiceList[I],I,O](implicit c: ContrGet[I,CONTR,O]):
+  MatrixGet[InnerMatrixCompose[I,M,CONTR,COV],I,O] = {
+    new MatrixGet[InnerMatrixCompose[I,M,CONTR,COV],I,O] {
+      override def apply(t: InnerMatrixCompose[I, M, CONTR, COV]): Service[I, O] = c(t.servicesColumn)
+    }
+  }
   //Когда у нас M <: ServiceMatrix,I,O и есть implicit CovGet[M.CovSignature, I,O]
+  implicit def selectCovariant[M <: ServiceMatrix,CONTR<: ContrServiceList[O], COV <: CovServiceList[O],I,O](implicit c: CovGet[O,COV,I]):
+  MatrixGet[InnerMatrixCompose[O,M,CONTR,COV],I,O] = new MatrixGet[InnerMatrixCompose[O,M,CONTR,COV],I,O]{
+    def apply(t : InnerMatrixCompose[O,M,CONTR,COV]):Service[I,O] = c(t.servicesRow)
+  }
+
   //Когда у нас M <: ServiceMatrix,M.Diagonal,M.diagonal
   implicit def selectDiagonal[M <: ServiceMatrix,H, CONTR<: ContrServiceList[H], COV <: CovServiceList[H]]:
   MatrixGet[InnerMatrixCompose[H,M,CONTR,COV],H,H] =
