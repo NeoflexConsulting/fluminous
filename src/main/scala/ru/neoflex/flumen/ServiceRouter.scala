@@ -2,21 +2,17 @@ package ru.neoflex.flumen
 
 import ru.neoflex.flumen.MatrixCompose.InnerMatrixCompose
 
-import scala.reflect.ClassTag
-
 class NotFoundException extends Exception
 
-// TODO Implement Contains and Unique typeclasses
+// TODO Implement Unique typeclasses
 
 sealed trait ContrServiceList[A] {
   type R <: ContrServiceList[A]
-  def last(implicit last : Last[A,R]): Service[A,last.Out]
   def append[H](service: Service[A,H]): ContrCompose[A,H,R]
 }
 
 sealed class ContrNil[A] extends ContrServiceList[A] {
   type R = ContrNil[A]
-  override def last(implicit last : Last[A,R]): Service[A,last.Out] = last.apply(this)
   override def append[H](service: Service[A,H]): ContrCompose[A,H,R] = ContrCompose(service,ContrNil[A])
 }
 
@@ -26,7 +22,6 @@ object ContrNil {
 
 final case class ContrCompose[A, H, T <: ContrServiceList[A]](head : Service[A,H], tail : T) extends ContrServiceList[A] {
   type R = ContrCompose[A,H,T]
-  override def last(implicit last : Last[A,R]): Service[A,last.Out] = last.apply(this)
   override def append[H](service: Service[A,H]): ContrCompose[A,H,R] = ContrCompose(service,this)
   def get[U](implicit get: ContrGet[A,R,U]):Service[A,U] = get.apply(this)
 }
@@ -34,31 +29,6 @@ final case class ContrCompose[A, H, T <: ContrServiceList[A]](head : Service[A,H
 
 object ContrServiceList{
   def apply[A,H](service: Service[A,H]) = {ContrCompose[A, H,ContrNil[A]](service,  ContrNil[A])}
-}
-
-trait Last[A, L <: ContrServiceList[A]] {
-  type Out
-  def apply(t: L): Service[A,Out]
-}
-
-object Last {
-  def apply[A, L <: ContrServiceList[A]](implicit last: Last[A,L]): Aux[A, L, last.Out] = last
-
-  type Aux[A, L <: ContrServiceList[A], Out0] = Last[A,L] { type Out = Out0 }
-
-  implicit def hsingleLast[A,H]: Aux[A, ContrCompose[A, H,ContrNil[A]], H] =
-    new Last[A, ContrCompose[A, H,ContrNil[A]]] {
-      type Out = H
-      def apply(l : ContrCompose[A,H,ContrNil[A]]): Service[A,Out] = l.head
-    }
-
-  implicit def hlistLast[A, H, T <: ContrServiceList[A], OutT]
-  (implicit lt : Last.Aux[A, T, OutT]): Aux[A, ContrCompose[A,H,T], OutT] =
-    new Last[A, ContrCompose[A,H,T]] {
-      type Out = OutT
-      def apply(l : ContrCompose[A,H,T]): Service[A,Out] = lt(l.tail)
-    }
-
 }
 
 
@@ -119,6 +89,7 @@ object MatrixCompose {
     def enlarge[A](service: Service[A,A], servicesColumn : this.ContrSignature[A], servicesRow: this.CovSignature[A]) = {
       MatrixCompose(this)(service,servicesColumn,servicesRow)
     }
+    def get[I,O](implicit get: MatrixGet[R,I,O]):Service[I,O] = get(this)
   }
 }
 
@@ -213,19 +184,19 @@ object MatrixGet {
 
 object Test {
   def main(args: Array[String]): Unit = {
-      val serviceMatrix1 = ServiceMatrix(Service[String,String]("upper",_.toUpperCase))
-      val service1List = ContrServiceList(Service[Int, List[Int]]("toList",List(_))).
-        append(Service[Int, String]("to_string",_.toString))
-      println(service1List.get[String].invoke(23))
-      println(service1List.get[List[Int]].invoke(23))
+    val upperCaseService = Service[String,String]("upper",_.toUpperCase)
+    val incrementService = Service[Int,Int]("increment",_ + 1)
+    val toStringService = Service[Int, String]("to_string",_.toString)
+    val toIntService = Service[String,Int]("to_int",_.toInt)
 
-    val service2List = CovServiceList(Service[List[Int],Int]("fromList",_.sum)).
-        append(Service[String,Int]("to_int",_.toInt))
-    println(service2List.get[String].invoke("23"))
-    println(service2List.get[List[Int]].invoke(List(23,12)))
+    val serviceMatrix = ServiceMatrix(upperCaseService)
+    val bigServiceMatrix = serviceMatrix.
+          enlarge(incrementService, ContrServiceList(toStringService), CovServiceList(toIntService))
 
-      val serviceMatrix2 = serviceMatrix1.enlarge(Service[Int,Int]("increment",_ + 1),
-        ContrServiceList(Service[Int, String]("to_string",_.toString)),
-        CovServiceList(Service[String,Int]("to_int",_.toInt)))
+    println(serviceMatrix.get[String,String].invoke("some String from Service Matrix1"))
+    println(bigServiceMatrix.get[Int,Int].invoke(3))
+    println(bigServiceMatrix.get[Int,String].invoke(3))
+    println(bigServiceMatrix.get[String,Int].invoke("3"))
+    println(bigServiceMatrix.get[String,String].invoke("some String"))
   }
 }
