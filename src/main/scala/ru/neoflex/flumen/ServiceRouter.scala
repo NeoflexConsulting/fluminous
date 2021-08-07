@@ -88,12 +88,14 @@ object CovServiceList {
 
 sealed trait ServiceMatrix{
   type R <: ServiceMatrix
+  type DiagonalType
   type ContrSignature[A] <: ContrServiceList[A]
   type CovSignature[A] <: CovServiceList[A]
 }
 
 object NilMatrix extends ServiceMatrix {
   type R = NilMatrix.type
+  type DiagonalType = Nothing
   type ContrSignature[A] = ContrNil[A]
   type CovSignature[A] = CovNil[A]
 }
@@ -108,8 +110,9 @@ object MatrixCompose {
 
   final case class InnerMatrixCompose [H, T <: ServiceMatrix, SCONTR<: ContrServiceList[H], SCOV <: CovServiceList[H]](tail : T,service: Service[H,H], servicesColumn : SCONTR, servicesRow: SCOV ) extends ServiceMatrix {
     type R =  InnerMatrixCompose [H, T, SCONTR, SCOV]
-    type ContrSignature[A] = ContrCompose[A,H,tail.ContrSignature[A]]
-    type CovSignature[A] = CovCompose[H,A,tail.CovSignature[A]]
+    type DiagonalType = H
+    type ContrSignature[A] = ContrCompose[A,DiagonalType,tail.ContrSignature[A]]
+    type CovSignature[A] = CovCompose[DiagonalType,A,tail.CovSignature[A]]
 
     def enlarge[A](service: Service[A,A], servicesColumn : this.ContrSignature[A], servicesRow: this.CovSignature[A]) = {
       MatrixCompose(this)(service,servicesColumn,servicesRow)
@@ -177,11 +180,11 @@ trait MatrixGet[M <: ServiceMatrix,I,O] {
 object MatrixGet {
   def apply[M <: ServiceMatrix,I,O](implicit got: MatrixGet[M,I,O]): MatrixGet[M,I,O] = got
   //У нас должно быть 3 базовых случая
-  //Когда у нас есть ContrGet[M.ContrSignature, I,O]
-  //Когда у нас есть CovGet[M.CovSignature, I,O]
-  //Когда у нас есть CovGet[M.CovSignature, I,O]
-  //Инстанс для случая, когда в M тип элемента H совпадает совпадает с искомым U = H, мы просто возвращаем t.head
-  //implicit def select[M <: ServiceMatrix,I,O](implicit cov: )
+  //Когда у нас M <: ServiceMatrix,I,O и есть implicit ContrGet[M.ContrSignature, I,O]
+  //Когда у нас M <: ServiceMatrix,I,O и есть implicit CovGet[M.CovSignature, I,O]
+  //Когда у нас M <: ServiceMatrix,M.Diagonal,M.diagonal
+
+  //И видимо должен быть рекурсивный, перебирающий матрицы
 }
 
 
