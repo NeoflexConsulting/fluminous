@@ -38,6 +38,7 @@ trait ContrGet[A, L <: ContrServiceList[A],U] {
   type Out = U
   def apply(t: L): Service[A,Out]
 }
+
 object ContrGet {
   def apply[A, L <: ContrServiceList[A],U](implicit got: ContrGet[A,L,U]): ContrGet[A, L, U] = got
   implicit def select[A, H, T <: ContrServiceList[A]]: ContrGet[A, ContrCompose[A,H,T],H] =
@@ -78,9 +79,14 @@ object Last {
 }
 
 
-sealed trait CovServiceList[A]
+sealed trait CovServiceList[A] {
+  type R <: CovServiceList[A]
+  def append[H](service: Service[H,A]): CovCompose[H,A,R]
+}
 
 sealed class CovNil[A] extends CovServiceList[A] {
+  type R = CovNil[A]
+  override def append[H](service: Service[H,A]): CovCompose[H,A,R] = CovCompose(service,CovNil[A])
 }
 
 object CovNil {
@@ -88,10 +94,33 @@ object CovNil {
 }
 
 final case class CovCompose[H, A, T <: CovServiceList[A]](head : Service[H,A], tail : T) extends CovServiceList[A] {
+  type R = CovCompose[H,A,T]
+  override def append[H](service: Service[H,A]): CovCompose[H,A,R] = CovCompose(service,this)
+  def get[U](implicit get: CovGet[A,R,U]):Service[U,A] = get.apply(this)
 }
 
 object CovServiceList {
   def apply[H,A](service: Service[H,A]) ={CovCompose[H,A,CovNil[A]](service,CovNil[A])}
+}
+
+trait CovGet[A, L <: CovServiceList[A],U] {
+  type Out = U
+  def apply(t: L): Service[Out,A]
+}
+
+object CovGet {
+  def apply[A, L <: CovServiceList[A],U](implicit got: CovGet[A,L,U]): CovGet[A, L, U] = got
+  implicit def select[A, H, T <: CovServiceList[A]]: CovGet[A, CovCompose[H,A,T],H] =
+    new CovGet[A, CovCompose[H,A,T],H] {
+      def apply(t : CovCompose[H,A,T]):Service[H,A] = t.head
+    }
+
+  implicit def recurse[A, H, T <: CovServiceList[A], U]
+  (implicit st : CovGet[A, T, U]): CovGet[A, CovCompose[H,A, T], U] =
+    new CovGet[A, CovCompose[H,A,T], U] {
+      def apply(t :CovCompose[H,A,T]):Service[U,A]  = st(t.tail)
+    }
+
 }
 
 
@@ -134,12 +163,18 @@ object ServiceMatrix {
 object Test {
   def main(args: Array[String]): Unit = {
       val m1 = ServiceMatrix(Service[String,String]("upper",_.toUpperCase))
-      val sd = ContrServiceList(Service[Int, List[Int]]("toList",List(_)))
-      val serviceList = sd.append(Service[Int, String]("to_string",_.toString))
-      println(serviceList.get[String].invoke(23))
-      println(serviceList.get[List[Int]].invoke(23))
-      val m2 = m1.enlarge[Int](Service("increment",_ + 1),
-        ContrServiceList[Int, String](Service("to_string",_.toString)),
-        CovServiceList[String,Int](Service("to_int",_.toInt)))
+      val service1List = ContrServiceList(Service[Int, List[Int]]("toList",List(_))).
+        append(Service[Int, String]("to_string",_.toString))
+      println(service1List.get[String].invoke(23))
+      println(service1List.get[List[Int]].invoke(23))
+
+    val service2List = CovServiceList(Service[List[Int],Int]("fromList",_.sum)).
+        append(Service[String,Int]("to_int",_.toInt))
+    println(service2List.get[String].invoke("23"))
+    println(service2List.get[List[Int]].invoke(List(23,12)))
+
+      val m2 = m1.enlarge(Service[Int,Int]("increment",_ + 1),
+        ContrServiceList(Service[Int, String]("to_string",_.toString)),
+        CovServiceList(Service[String,Int]("to_int",_.toInt)))
   }
 }
