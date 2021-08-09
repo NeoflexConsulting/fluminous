@@ -34,11 +34,13 @@ object ContrServiceList{
 
 sealed trait CovServiceList[A] {
   type R <: CovServiceList[A]
+  type HL <: HList
   def append[H](service: Service[H,A]): CovCompose[H,A,R]
 }
 
 sealed class CovNil[A] extends CovServiceList[A] {
   type R = CovNil[A]
+  type HL = HNil
   override def append[H](service: Service[H,A]): CovCompose[H,A,R] = CovCompose(service,CovNil[A])
 }
 
@@ -48,6 +50,7 @@ object CovNil {
 
 final case class CovCompose[H, A, T <: CovServiceList[A]](head : Service[H,A], tail : T) extends CovServiceList[A] {
   type R = CovCompose[H,A,T]
+  type HL =  shapeless.::[Service[H,A],tail.HL]
   override def append[H](service: Service[H,A]): CovCompose[H,A,R] = CovCompose(service,this)
   def get[U](implicit get: CovGet[A,R,U]):Service[U,A] = get.apply(this)
 }
@@ -101,7 +104,9 @@ object MatrixCompose {
       val services = this.servicesColumn.append(this.service)
       val runtimeData = RuntimeData[H](Seq.empty[Result[H]], services, this.conditions)
       val runtime = runtimeData :: HNil
-      val rows = this.servicesRow :: HNil
+      //Надо из serviceRows сделать HList контрвариантных списков
+      // val columns = this.servicesRow.toHList
+      (1 ::232 :: "strtr" :: HNil)
       val runtimeConstructor = new RuntimeConstructor(runtime)
       ???
     }
