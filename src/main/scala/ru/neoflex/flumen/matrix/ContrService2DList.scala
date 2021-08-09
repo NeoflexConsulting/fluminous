@@ -1,4 +1,4 @@
-package ru.neoflex.flumen
+package ru.neoflex.flumen.matrix
 
 sealed trait ContrService2DList {
   type R <: ContrService2DList

@@ -1,4 +1,4 @@
-package ru.neoflex.flumen
+package ru.neoflex.flumen.matrix
 
 abstract class Service[IN,OUT] {
   val name: String

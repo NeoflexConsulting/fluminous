@@ -1,4 +1,4 @@
-package ru.neoflex.flumen
+package ru.neoflex.flumen.matrix
 
 trait GetServiceByInput[SEARCHED,O, LIST <: ServicesWithOutput[O]] {
   def apply(t: LIST): Service[SEARCHED,O]

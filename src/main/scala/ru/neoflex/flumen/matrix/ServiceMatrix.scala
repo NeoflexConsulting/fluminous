@@ -1,6 +1,7 @@
-package ru.neoflex.flumen
+package ru.neoflex.flumen.matrix
 
-import shapeless.{ HList, HNil }
+import ru.neoflex.flumen.runtime.{Condition, RuntimeConstructor, TypeInfo, Variable}
+import shapeless.{HList, HNil}
 
 sealed trait ServiceMatrix {
   type THIS <: ServiceMatrix

@@ -1,5 +1,6 @@
 package ru.neoflex.flumen
 
+import ru.neoflex.flumen.matrix.{Service, ServicesWithInput}
 import shapeless.{HList, HNil, Poly1}
 
 object HListsOps {

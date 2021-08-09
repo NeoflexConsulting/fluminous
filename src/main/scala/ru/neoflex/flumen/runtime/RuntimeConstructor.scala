@@ -1,4 +1,4 @@
-package ru.neoflex.flumen
+package ru.neoflex.flumen.runtime
 
 import shapeless.HList
 

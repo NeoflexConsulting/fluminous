@@ -1,4 +1,4 @@
-package ru.neoflex.flumen
+package ru.neoflex.flumen.matrix
 
 sealed trait ServicesWithOutput[O] {
   type THIS <: ServicesWithOutput[O]
