@@ -1,7 +1,7 @@
 package ru.neoflex.flumen
 
 import ru.neoflex.flumen.MatrixCompose.InnerMatrixCompose
-
+import shapeless.{HList, HNil}
 class NotFoundException extends Exception
 
 // TODO Implement Unique typeclasses
@@ -76,26 +76,44 @@ object NilMatrix extends ServiceMatrix {
 
 
 object MatrixCompose {
-  def apply[H, T <: ServiceMatrix] (tail : T)(service: Service[H,H], servicesColumn : tail.ContrSignature[H], servicesRow: tail.CovSignature[H] ) = {
-    InnerMatrixCompose(tail,service,servicesColumn,servicesRow)
+  def apply[H, T <: ServiceMatrix] (tail : T)(service: Service[H,H],  conditions: Seq[Condition[H]], servicesColumn : tail.ContrSignature[H], servicesRow: tail.CovSignature[H] ) = {
+    InnerMatrixCompose(tail,service,conditions, servicesColumn,servicesRow)
   }
 
-  final case class InnerMatrixCompose [H, T <: ServiceMatrix, SCONTR<: ContrServiceList[H], SCOV <: CovServiceList[H]](tail : T,service: Service[H,H], servicesColumn : SCONTR, servicesRow: SCOV ) extends ServiceMatrix {
+  final case class InnerMatrixCompose [H, T <: ServiceMatrix, SCONTR<: ContrServiceList[H],
+      SCOV <: CovServiceList[H]](tail : T,service: Service[H,H], conditions: Seq[Condition[H]], servicesColumn : SCONTR, servicesRow: SCOV ) extends ServiceMatrix {
     type R =  InnerMatrixCompose [H, T, SCONTR, SCOV]
     type DiagonalType = H
     type ContrSignature[A] = ContrCompose[A,DiagonalType,tail.ContrSignature[A]]
     type CovSignature[A] = CovCompose[DiagonalType,A,tail.CovSignature[A]]
 
-    def enlarge[A](service: Service[A,A], servicesColumn : this.ContrSignature[A], servicesRow: this.CovSignature[A]) = {
-      MatrixCompose(this)(service,servicesColumn,servicesRow)
+    def enlarge[A](servicesColumn : this.ContrSignature[A], servicesRow: this.CovSignature[A], service: Service[A,A], conditions: Seq[Condition[A]] = Seq.empty[Condition[A]]) = {
+      MatrixCompose(this)(service,conditions,servicesColumn,servicesRow)
     }
     def get[I,O](implicit get: MatrixGet[R,I,O]):Service[I,O] = get(this)
+
+    // rows = гетерогенный список совариантных сервисов, у которых первый параметры имеет вид Service[H,A]
+ /*   protected def appendRuntimeData[R<:HList, T<: HList](runtime: R, rows: Seq[CovServiceList[]] ) = {
+           ???
+    }*/
+
+    def toRouterRuntime(): HList = {
+      val services = this.servicesColumn.append(this.service)
+      val runtimeData = RuntimeData[H](Seq.empty[Result[H]], services, this.conditions)
+      val runtime = runtimeData :: HNil
+      val rows = this.servicesRow :: HNil
+      val runtimeConstructor = new RuntimeConstructor(runtime)
+      ???
+    }
   }
 }
 
 object ServiceMatrix {
+  def apply[W](service: Service[W,W], condition: Condition[W]) = {
+    MatrixCompose(NilMatrix)(service,Seq(condition), ContrNil[W], CovNil[W])
+  }
   def apply[W](service: Service[W,W]) = {
-    MatrixCompose(NilMatrix)(service,ContrNil[W], CovNil[W])
+    MatrixCompose(NilMatrix)(service,Seq.empty[Condition[W]], ContrNil[W], CovNil[W])
   }
 }
 
@@ -191,7 +209,7 @@ object Test {
 
     val serviceMatrix = ServiceMatrix(upperCaseService)
     val bigServiceMatrix = serviceMatrix.
-          enlarge(incrementService, ContrServiceList(toStringService), CovServiceList(toIntService))
+          enlarge(ContrServiceList(toStringService), CovServiceList(toIntService),incrementService)
 
     println(serviceMatrix.get[String,String].invoke("some String from Service Matrix1"))
     println(bigServiceMatrix.get[Int,Int].invoke(3))
