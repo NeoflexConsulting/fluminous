@@ -1,6 +1,6 @@
 package org.fluminous
 
-import org.fluminous.matrix.{Service, ServiceMatrix, ServicesWithInput, ServicesWithOutput}
+import org.fluminous.matrix.{ Service, ServiceMatrix, ServicesWithInput, ServicesWithOutput }
 
 class NotFoundException extends Exception
 
@@ -15,17 +15,16 @@ object TestExample {
     val toIntService     = Service[String, Int]("to_int", _.toInt)
 
     val serviceMatrix = ServiceMatrix(upperCaseService)
-    val d: serviceMatrix.SERVICE_WITH_INPUT_TYPE[Int] = ServicesWithInput(toStringService)
 
     val bigServiceMatrix =
-      serviceMatrix.enlarge(d, ServicesWithOutput(toIntService), incrementService)
+      serviceMatrix.appendType(ServicesWithInput(toStringService), ServicesWithOutput(toIntService), incrementService)
 
     println(serviceMatrix.get[String, String].invoke("some String from Service Matrix1"))
     println(bigServiceMatrix.get[Int, Int].invoke(3))
     println(bigServiceMatrix.get[Int, String].invoke(3))
     println(bigServiceMatrix.get[String, Int].invoke("3"))
     println(bigServiceMatrix.get[String, String].invoke("some String"))
-    //val executionRuntime = bigServiceMatrix.toExecutionRuntime
-    //executionRuntime.invokeService("upper","upper_cased")
+    val executionRuntime = bigServiceMatrix.toExecutionRuntime
+    executionRuntime.invokeService("upper", "upper_cased")
   }
 }
