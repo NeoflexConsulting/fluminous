@@ -6,7 +6,7 @@ class NotFoundException extends Exception
 
 // TODO Implement Unique typeclasses
 
-object Test {
+object TestExample {
   def main(args: Array[String]): Unit = {
 
     val result = this.getClass.getTypeName
@@ -26,5 +26,7 @@ object Test {
     println(bigServiceMatrix.get[Int, String].invoke(3))
     println(bigServiceMatrix.get[String, Int].invoke("3"))
     println(bigServiceMatrix.get[String, String].invoke("some String"))
+    val executionRuntime = bigServiceMatrix.toExecutionRuntime
+    executionRuntime.invokeService("upper","upper_cased")
   }
 }

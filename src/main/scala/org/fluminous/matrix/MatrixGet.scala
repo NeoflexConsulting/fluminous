@@ -19,7 +19,7 @@ object MatrixGet {
     new MatrixGet[I, O, InnerServiceMatrixCompose[I, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]] {
       override def apply(
         t: InnerServiceMatrixCompose[I, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]
-      ): Service[I, O] = c(t.serviceWithInput)
+      ): Service[I, O] = c(t.servicesWithInput)
     }
   }
 
