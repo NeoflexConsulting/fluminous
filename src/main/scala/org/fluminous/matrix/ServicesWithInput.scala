@@ -1,4 +1,4 @@
-package ru.neoflex.flumen.matrix
+package org.fluminous.matrix
 
 sealed trait ServicesWithInput[I] {
   type THIS <: ServicesWithInput[I]

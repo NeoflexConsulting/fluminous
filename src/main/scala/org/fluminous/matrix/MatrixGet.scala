@@ -1,4 +1,4 @@
-package ru.neoflex.flumen.matrix
+package org.fluminous.matrix
 
 import ServiceMatrixCompose.InnerServiceMatrixCompose
 

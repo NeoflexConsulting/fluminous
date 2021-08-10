@@ -1,7 +1,6 @@
-package ru.neoflex.flumen.matrix
+package org.fluminous.matrix
 
-import ru.neoflex.flumen.runtime.{Condition, RuntimeConstructor, TypeInfo, Variable}
-import shapeless.{HList, HNil}
+import org.fluminous.runtime.Condition
 
 sealed trait ServiceMatrix {
   type THIS <: ServiceMatrix
@@ -57,22 +56,6 @@ object ServiceMatrixCompose {
       ServiceMatrixCompose(this)(services, conditions, nextservicesWithInput, nextServicesWithOutput)
     }
     def get[I, O](implicit get: MatrixGet[I, O, THIS]): Service[I, O] = get(this)
-
-    // rows = гетерогенный список совариантных сервисов, у которых первый параметры имеет вид Service[H,A]
-    /*   protected def appendRuntimeData[R<:HList, T<: HList](runtime: R, rows: Seq[CovServiceList[]] ) = {
-              ???
-       }*/
-
-    def toRouterRuntime(): HList = {
-      val services    = this.serviceWithInput.append(this.service)
-      val runtimeData = TypeInfo[TYPE](Seq.empty[Variable[TYPE]], services, this.conditions)
-      val runtime     = runtimeData :: HNil
-      //Надо из serviceRows сделать HList контрвариантных списков
-      // val columns = this.servicesRow.toHList
-      (1 :: 232 :: "strtr" :: HNil)
-      val runtimeConstructor = new RuntimeConstructor(runtime)
-      ???
-    }
   }
 }
 

@@ -1,6 +1,6 @@
-package ru.neoflex.flumen
+package org.fluminous
 
-import ru.neoflex.flumen.matrix.{ Service, ServiceMatrix, ServicesWithInput, ServicesWithOutput }
+import org.fluminous.matrix.{Service, ServiceMatrix, ServicesWithInput, ServicesWithOutput}
 
 class NotFoundException extends Exception
 
@@ -8,6 +8,10 @@ class NotFoundException extends Exception
 
 object Test {
   def main(args: Array[String]): Unit = {
+
+    val result = this.getClass.getTypeName
+    println(result)
+
     val upperCaseService = Service[String, String]("upper", _.toUpperCase)
     val incrementService = Service[Int, Int]("increment", _ + 1)
     val toStringService  = Service[Int, String]("to_string", _.toString)
