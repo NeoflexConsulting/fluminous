@@ -1,2 +1,2 @@
 # Fluminous
-Akka-based serverless workflow DSL.
+A Scala-based framework designed to build stateless workflow routes wrapped into functions.
