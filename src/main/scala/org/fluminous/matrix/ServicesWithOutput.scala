@@ -25,6 +25,6 @@ final case class ServicesWithOutputCompose[I, O, TAIL <: ServicesWithOutput[O]](
 
 object ServicesWithOutput {
   def apply[I, O](service: Service[I, O]) = {
-    ServicesWithOutputCompose[I, O, ServicesWithOutputNil[O]](service, ServicesWithOutputNil[O])
+    ServicesWithOutputNil[O].append(service)
   }
 }

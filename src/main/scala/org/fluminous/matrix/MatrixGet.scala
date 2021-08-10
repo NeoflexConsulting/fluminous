@@ -1,7 +1,5 @@
 package org.fluminous.matrix
 
-import ServiceMatrixCompose.InnerServiceMatrixCompose
-
 trait MatrixGet[I, O, M <: ServiceMatrix] {
   def apply(t: M): Service[I, O]
 }
@@ -12,13 +10,13 @@ object MatrixGet {
     I,
     O,
     TM <: ServiceMatrix,
-    SERVICES_WITH_INPUT_TYPE <: ServicesWithInput[I],
-    SERVICES_WITH_OUTPUT_TYPE <: ServicesWithOutput[I]
-  ](implicit c: GetServiceByOutput[I, O, SERVICES_WITH_INPUT_TYPE]
-  ): MatrixGet[I, O, InnerServiceMatrixCompose[I, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]] = {
-    new MatrixGet[I, O, InnerServiceMatrixCompose[I, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]] {
+    SERVICES_WITH_INPUT_TYPE[I] <: ServicesWithInput[I],
+    SERVICES_WITH_OUTPUT_TYPE[O] <: ServicesWithOutput[O]
+  ](implicit c: GetServiceByOutput[I, O, SERVICES_WITH_INPUT_TYPE[I]]
+  ): MatrixGet[I, O, ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, I, TM]] = {
+    new MatrixGet[I, O, ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, I, TM]] {
       override def apply(
-        t: InnerServiceMatrixCompose[I, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]
+        t: ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, I, TM]
       ): Service[I, O] = c(t.servicesWithInput)
     }
   }
@@ -27,27 +25,25 @@ object MatrixGet {
     I,
     O,
     TM <: ServiceMatrix,
-    SERVICES_WITH_INPUT_TYPE <: ServicesWithInput[O],
-    SERVICES_WITH_OUTPUT_TYPE <: ServicesWithOutput[O]
-  ](implicit c: GetServiceByInput[I, O, SERVICES_WITH_OUTPUT_TYPE]
-  ): MatrixGet[I, O, InnerServiceMatrixCompose[O, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]] =
-    new MatrixGet[I, O, InnerServiceMatrixCompose[O, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]] {
-      def apply(
-        t: InnerServiceMatrixCompose[O, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]
-      ): Service[I, O] = c(t.servicesWithOutput)
+    SERVICES_WITH_INPUT_TYPE[I] <: ServicesWithInput[I],
+    SERVICES_WITH_OUTPUT_TYPE[O] <: ServicesWithOutput[O]
+  ](implicit c: GetServiceByInput[I, O, SERVICES_WITH_OUTPUT_TYPE[O]]
+  ): MatrixGet[I, O, ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, O, TM]] =
+    new MatrixGet[I, O, ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, O, TM]] {
+      def apply(t: ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, O, TM]): Service[I, O] =
+        c(t.servicesWithOutput)
     }
 
   //Когда у нас M <: ServiceMatrix,M.Diagonal,M.diagonal
   implicit def selectFromDiagonal[
     M <: ServiceMatrix,
     H,
-    SERVICES_WITH_INPUT_TYPE <: ServicesWithInput[H],
-    SERVICES_WITH_OUTPUT_TYPE <: ServicesWithOutput[H]
-  ]: MatrixGet[H, H, InnerServiceMatrixCompose[H, M, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]] =
-    new MatrixGet[H, H, InnerServiceMatrixCompose[H, M, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]] {
-      def apply(
-        t: InnerServiceMatrixCompose[H, M, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]
-      ): Service[H, H] = t.service
+    SERVICES_WITH_INPUT_TYPE[H] <: ServicesWithInput[H],
+    SERVICES_WITH_OUTPUT_TYPE[H] <: ServicesWithOutput[H]
+  ]: MatrixGet[H, H, ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, H, M]] =
+    new MatrixGet[H, H, ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, H, M]] {
+      def apply(t: ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, H, M]): Service[H, H] =
+        t.service
     }
 
   //И рекурсивный случай, перебирающий матрицы
@@ -56,13 +52,12 @@ object MatrixGet {
     O,
     TM <: ServiceMatrix,
     H,
-    SERVICES_WITH_INPUT_TYPE <: ServicesWithInput[H],
-    SERVICES_WITH_OUTPUT_TYPE <: ServicesWithOutput[H]
+    SERVICES_WITH_INPUT_TYPE[H] <: ServicesWithInput[H],
+    SERVICES_WITH_OUTPUT_TYPE[H] <: ServicesWithOutput[H]
   ](implicit mt: MatrixGet[I, O, TM]
-  ): MatrixGet[I, O, InnerServiceMatrixCompose[H, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]] =
-    new MatrixGet[I, O, InnerServiceMatrixCompose[H, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]] {
-      def apply(
-        t: InnerServiceMatrixCompose[H, TM, SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE]
-      ): Service[I, O] = mt(t.tail)
+  ): MatrixGet[I, O, ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, H, TM]] =
+    new MatrixGet[I, O, ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, H, TM]] {
+      def apply(t: ServiceMatrixCompose[SERVICES_WITH_INPUT_TYPE, SERVICES_WITH_OUTPUT_TYPE, H, TM]): Service[I, O] =
+        mt(t.tail)
     }
 }
