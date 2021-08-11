@@ -1,6 +1,9 @@
-/*
+
 package org.fluminous.matrix
 
+
+
+/*
 trait MatrixGet[I, O, M <: ServiceMatrix] {
   def apply(t: M): Service[I, O]
 }

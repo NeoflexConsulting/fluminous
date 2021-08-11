@@ -23,15 +23,15 @@ object TestExample {
 
     val fromIntServices      = ServicesWithInput(toStringService)
     val toIntServices        = ServicesWithOutput(toIntService)
-    val fromCustomerServices = ServicesWithInput(getNameService).append(getAgeService)
-    val toCustomerServices   = ServicesWithOutput(getCustomerByNameService).append(getCustomerByAgeService)
+    val fromCustomerServices = ServicesWithInput(getNameService).append(Seq(getAgeService))
+    val toCustomerServices   = ServicesWithOutput(getCustomerByNameService).append(Seq(getCustomerByAgeService))
 
     val serviceMatrix = ServiceMatrix(upperCaseService)
 
     val bigServiceMatrix =
       serviceMatrix
-        .appendType(fromIntServices, toIntServices, incrementService)
-        .appendType(fromCustomerServices, toCustomerServices, increaseAgeService)
+        .appendType(fromIntServices, toIntServices, Seq(incrementService))
+        .appendType(fromCustomerServices, toCustomerServices, Seq(increaseAgeService))
 
     for {
       executionRuntime <- bigServiceMatrix.toExecutionRuntime

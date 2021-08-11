@@ -3,6 +3,7 @@ package org.fluminous.matrix
 import org.fluminous.runtime.exception.{ ExecutionRuntimeException, NoServicesFoundException }
 import org.fluminous.runtime.{ Condition, ExecutionRuntime, TypeInfo }
 
+import scala.collection.mutable
 import scala.reflect.ClassTag
 
 sealed trait ServiceMatrix {
@@ -30,7 +31,7 @@ object NilServiceMatrix extends ServiceMatrix {
 
 final case class ServiceMatrixCompose[SI <: ServicesWithInput[TYPE], TYPE: ClassTag, TAIL <: ServiceMatrix](
   tail: TAIL,
-  service: Service[TYPE, TYPE],
+  services: mutable.Buffer[Service[TYPE, TYPE]],
   conditions: Seq[Condition[TYPE]],
   servicesWithInput: SI)
     extends ServiceMatrix {
@@ -42,7 +43,7 @@ final case class ServiceMatrixCompose[SI <: ServicesWithInput[TYPE], TYPE: Class
   def appendType[NEXT_TYPE: ClassTag](
     nextServicesWithInput: this.SERVICE_WITH_INPUT_TYPE[NEXT_TYPE],
     nextServicesWithOutput: this.SERVICES_WITH_OUTPUT_TYPE[NEXT_TYPE],
-    services: Service[NEXT_TYPE, NEXT_TYPE],
+    services: Seq[Service[NEXT_TYPE, NEXT_TYPE]],
     conditions: Seq[Condition[NEXT_TYPE]] = Seq.empty[Condition[NEXT_TYPE]]
   ): ServiceMatrixCompose[
     ServicesWithInputCompose[NEXT_TYPE, TYPE, tail.SERVICE_WITH_INPUT_TYPE[NEXT_TYPE]],
@@ -51,7 +52,7 @@ final case class ServiceMatrixCompose[SI <: ServicesWithInput[TYPE], TYPE: Class
   ] = {
     ServiceMatrixCompose(
       this.updateServicesWithInput(nextServicesWithOutput),
-      services,
+      services.toBuffer,
       conditions,
       nextServicesWithInput
     )
@@ -62,9 +63,9 @@ final case class ServiceMatrixCompose[SI <: ServicesWithInput[TYPE], TYPE: Class
     val updatedTail = this.tail.updateServicesWithInput(services.tail)
     ServiceMatrixCompose(
       updatedTail,
-      this.service,
+      this.services,
       this.conditions,
-      ServicesWithInputCompose(services.service, this.servicesWithInput)
+      ServicesWithInputCompose(services.services, this.servicesWithInput)
     )
   }
 
@@ -85,12 +86,26 @@ final case class ServiceMatrixCompose[SI <: ServicesWithInput[TYPE], TYPE: Class
 object ServiceMatrix {
 
   def apply[W: ClassTag](service: Service[W, W], condition: Condition[W]) = {
-    ServiceMatrixCompose(NilServiceMatrix, service, Seq(condition), ServicesWithInputNil[W])
+    ServiceMatrixCompose(NilServiceMatrix, mutable.Buffer(service), Seq(condition), ServicesWithInputNil[W])
   }
+
+  def apply[W: ClassTag](services: Seq[Service[W, W]], condition: Condition[W]) = {
+    ServiceMatrixCompose(NilServiceMatrix, services.toBuffer, Seq(condition), ServicesWithInputNil[W])
+  }
+
   def apply[W: ClassTag](service: Service[W, W]) = {
     ServiceMatrixCompose(
       NilServiceMatrix,
-      service,
+      mutable.Buffer(service),
+      Seq.empty[Condition[W]],
+      ServicesWithInputNil[W]
+    )
+  }
+
+  def apply[W: ClassTag](services: Seq[Service[W, W]]) = {
+    ServiceMatrixCompose(
+      NilServiceMatrix,
+      services.toBuffer,
       Seq.empty[Condition[W]],
       ServicesWithInputNil[W]
     )
