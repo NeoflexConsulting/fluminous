@@ -7,7 +7,6 @@ import scala.reflect.ClassTag
 
 sealed trait ServiceMatrix {
   type THIS <: ServiceMatrix
-  type L2D <: ServicesWithInput2DList
   type UPDATED_THIS[O] <: ServiceMatrix
   type SERVICE_WITH_INPUT_TYPE[I] <: ServicesWithInput[I]
   type SERVICES_WITH_OUTPUT_TYPE[O] <: ServicesWithOutput[O]
@@ -18,7 +17,6 @@ sealed trait ServiceMatrix {
 
 object NilServiceMatrix extends ServiceMatrix {
   type THIS                         = NilServiceMatrix.type
-  type L2D                          = ServicesWithInput2DNil.type
   type UPDATED_THIS[O]              = NilServiceMatrix.type
   type SERVICE_WITH_INPUT_TYPE[A]   = ServicesWithInputNil[A]
   type SERVICES_WITH_OUTPUT_TYPE[A] = ServicesWithOutputNil[A]
@@ -30,21 +28,14 @@ object NilServiceMatrix extends ServiceMatrix {
     NilServiceMatrix
 }
 
-final case class ServiceMatrixCompose[
-  SI <: ServicesWithInput[TYPE],
-  SO <: ServicesWithOutput[TYPE],
-  TYPE: ClassTag,
-  TAIL <: ServiceMatrix
-](
+final case class ServiceMatrixCompose[SI <: ServicesWithInput[TYPE], TYPE: ClassTag, TAIL <: ServiceMatrix](
   tail: TAIL,
   service: Service[TYPE, TYPE],
   conditions: Seq[Condition[TYPE]],
-  servicesWithInput: SI,
-  servicesWithOutput: SO)
+  servicesWithInput: SI)
     extends ServiceMatrix {
-  type THIS                         = ServiceMatrixCompose[SI, SO, TYPE, TAIL]
-  type L2D                          = ServicesWithInput2DCompose[TYPE, SI, tail.L2D]
-  type UPDATED_THIS[O]              = ServiceMatrixCompose[ServicesWithInputCompose[TYPE, O, SI], SO, TYPE, tail.UPDATED_THIS[O]]
+  type THIS                         = ServiceMatrixCompose[SI, TYPE, TAIL]
+  type UPDATED_THIS[O]              = ServiceMatrixCompose[ServicesWithInputCompose[TYPE, O, SI], TYPE, tail.UPDATED_THIS[O]]
   type SERVICE_WITH_INPUT_TYPE[A]   = ServicesWithInputCompose[A, TYPE, tail.SERVICE_WITH_INPUT_TYPE[A]]
   type SERVICES_WITH_OUTPUT_TYPE[A] = ServicesWithOutputCompose[TYPE, A, tail.SERVICES_WITH_OUTPUT_TYPE[A]]
 
@@ -55,7 +46,6 @@ final case class ServiceMatrixCompose[
     conditions: Seq[Condition[NEXT_TYPE]] = Seq.empty[Condition[NEXT_TYPE]]
   ): ServiceMatrixCompose[
     ServicesWithInputCompose[NEXT_TYPE, TYPE, tail.SERVICE_WITH_INPUT_TYPE[NEXT_TYPE]],
-    ServicesWithOutputCompose[TYPE, NEXT_TYPE, tail.SERVICES_WITH_OUTPUT_TYPE[NEXT_TYPE]],
     NEXT_TYPE,
     UPDATED_THIS[NEXT_TYPE]
   ] = {
@@ -63,8 +53,7 @@ final case class ServiceMatrixCompose[
       this.updateServicesWithInput(nextServicesWithOutput),
       services,
       conditions,
-      nextServicesWithInput,
-      nextServicesWithOutput
+      nextServicesWithInput
     )
   }
   //def get[I, O](implicit get: MatrixGet[I, O, THIS]): Service[I, O] = get(this)
@@ -75,13 +64,12 @@ final case class ServiceMatrixCompose[
       updatedTail,
       this.service,
       this.conditions,
-      ServicesWithInputCompose(services.service, this.servicesWithInput),
-      this.servicesWithOutput
+      ServicesWithInputCompose(services.service, this.servicesWithInput)
     )
   }
 
   override def toTypeInfoSeq(current: Seq[TypeInfo]): Seq[TypeInfo] = {
-    val services = service +: servicesWithInput.toSeq
+    val services = servicesWithInput.toSeq
     val typeInfo = TypeInfo.forType[TYPE](services, conditions)
     tail.toTypeInfoSeq(typeInfo +: current)
   }
@@ -95,21 +83,16 @@ final case class ServiceMatrixCompose[
 }
 
 object ServiceMatrix {
-  type Aux[I[_] <: ServicesWithInput[_], O[_] <: ServicesWithOutput[_]] = ServiceMatrix {
-    type SERVICE_WITH_INPUT_TYPE[A]   = I[A]
-    type SERVICES_WITH_OUTPUT_TYPE[A] = O[A]
-  }
 
   def apply[W: ClassTag](service: Service[W, W], condition: Condition[W]) = {
-    ServiceMatrixCompose(NilServiceMatrix, service, Seq(condition), ServicesWithInputNil[W], ServicesWithOutputNil[W])
+    ServiceMatrixCompose(NilServiceMatrix, service, Seq(condition), ServicesWithInputNil[W])
   }
   def apply[W: ClassTag](service: Service[W, W]) = {
     ServiceMatrixCompose(
       NilServiceMatrix,
       service,
       Seq.empty[Condition[W]],
-      ServicesWithInputNil[W],
-      ServicesWithOutputNil[W]
+      ServicesWithInputNil[W]
     )
   }
 }
