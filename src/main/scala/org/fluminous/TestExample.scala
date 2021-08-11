@@ -6,24 +6,33 @@ class NotFoundException extends Exception
 
 // TODO Implement Unique typeclasses
 
+case class Customer(name: String, age: Int)
+
 object TestExample {
   def main(args: Array[String]): Unit = {
 
-    val upperCaseService = Service[String, String]("upper", _.toUpperCase)
-    val incrementService = Service[Int, Int]("increment", _ + 1)
-    val toStringService  = Service[Int, String]("to_string", _.toString)
-    val toIntService     = Service[String, Int]("to_int", _.toInt)
+    val upperCaseService         = Service[String, String]("upper", _.toUpperCase)
+    val incrementService         = Service[Int, Int]("increment", _ + 1)
+    val toStringService          = Service[Int, String]("to_string", _.toString)
+    val toIntService             = Service[String, Int]("to_int", _.toInt)
+    val getAgeService            = Service[Customer, Int]("get_age", _.age)
+    val getNameService           = Service[Customer, String]("get_name", _.name)
+    val increaseAgeService       = Service[Customer, Customer]("increase_age", c => c.copy(age = c.age + 1))
+    val getCustomerByAgeService  = Service[Int, Customer]("get_customer_by_age", age => Customer("testCustomer", age))
+    val getCustomerByNameService = Service[String, Customer]("get_customer_by_name", name => Customer(name, 25))
+
+    val fromIntServices      = ServicesWithInput(toStringService)
+    val toIntServices        = ServicesWithOutput(toIntService)
+    val fromCustomerServices = ServicesWithInput(getNameService).append(getAgeService)
+    val toCustomerServices   = ServicesWithOutput(getCustomerByNameService).append(getCustomerByAgeService)
 
     val serviceMatrix = ServiceMatrix(upperCaseService)
 
     val bigServiceMatrix =
-      serviceMatrix.appendType(ServicesWithInput(toStringService), ServicesWithOutput(toIntService), incrementService)
-/*
-    println(serviceMatrix.get[String, String].invoke("some String from Service Matrix1"))
-    println(bigServiceMatrix.get[Int, Int].invoke(3))
-    println(bigServiceMatrix.get[Int, String].invoke(3))
-    println(bigServiceMatrix.get[String, Int].invoke("3"))
-    println(bigServiceMatrix.get[String, String].invoke("some String"))*/
+      serviceMatrix
+        .appendType(fromIntServices, toIntServices, incrementService)
+        .appendType(fromCustomerServices, toCustomerServices, increaseAgeService)
+
     for {
       executionRuntime <- bigServiceMatrix.toExecutionRuntime
     } {
