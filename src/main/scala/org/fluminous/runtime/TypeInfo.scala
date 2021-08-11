@@ -5,6 +5,10 @@ import org.fluminous.matrix.{ RuntimeService, Service }
 
 import scala.reflect.ClassTag
 
+
+// TODO Сделать привязку выходного типа к обновлению конкретной ячейки контекста через функцию,
+//  что-то типа O => Runtime. Тогда можно вообще отказаться от проверки типов в Runtime
+
 case class TypeInfo(
   typeName: String,
   variables: Map[String, Variable],
