@@ -18,13 +18,17 @@ object TestExample {
 
     val bigServiceMatrix =
       serviceMatrix.appendType(ServicesWithInput(toStringService), ServicesWithOutput(toIntService), incrementService)
-
+/*
     println(serviceMatrix.get[String, String].invoke("some String from Service Matrix1"))
     println(bigServiceMatrix.get[Int, Int].invoke(3))
     println(bigServiceMatrix.get[Int, String].invoke(3))
     println(bigServiceMatrix.get[String, Int].invoke("3"))
-    println(bigServiceMatrix.get[String, String].invoke("some String"))
-    val executionRuntime = bigServiceMatrix.toExecutionRuntime
-    executionRuntime.invokeService("upper", "upper_cased")
+    println(bigServiceMatrix.get[String, String].invoke("some String"))*/
+    for {
+      executionRuntime <- bigServiceMatrix.toExecutionRuntime
+    } {
+      println(executionRuntime)
+      executionRuntime.invokeService("upper", "upper_cased")
+    }
   }
 }

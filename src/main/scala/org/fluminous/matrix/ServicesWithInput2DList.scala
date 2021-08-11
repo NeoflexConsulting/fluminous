@@ -38,4 +38,7 @@ final case class ServicesWithInput2DCompose[I, SI <: ServicesWithInput[I], TAIL 
       tail.appendRow[O](servicesWithOutput.tail)
     )
   }
+  def dropColumn: (SI, TAIL) = {
+    (services, tail)
+  }
 }
