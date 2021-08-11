@@ -6,7 +6,7 @@ import scala.reflect.ClassTag
 
 sealed trait ServiceMatrix {
   type THIS <: ServiceMatrix
-  type DIAGONAL_TYPE
+  type L2D <: ServicesWithInput2DList
   type SERVICE_WITH_INPUT_TYPE[I] <: ServicesWithInput[I]
   type SERVICES_WITH_OUTPUT_TYPE[O] <: ServicesWithOutput[O]
 
@@ -22,7 +22,7 @@ sealed trait ServiceMatrix {
 
 object NilServiceMatrix extends ServiceMatrix {
   type THIS                         = NilServiceMatrix.type
-  type DIAGONAL_TYPE                = Nothing
+  type L2D                          = ServicesWithInput2DNil.type
   type SERVICE_WITH_INPUT_TYPE[A]   = ServicesWithInputNil[A]
   type SERVICES_WITH_OUTPUT_TYPE[A] = ServicesWithOutputNil[A]
   override def toTypeInfoSeq(current: Seq[TypeInfo]): Seq[TypeInfo] = current
@@ -41,9 +41,9 @@ final case class ServiceMatrixCompose[
   servicesWithOutput: SO[TYPE])
     extends ServiceMatrix {
   type THIS                         = ServiceMatrixCompose[SI, SO, TYPE, TAIL]
-  type DIAGONAL_TYPE                = TYPE
-  type SERVICE_WITH_INPUT_TYPE[A]   = ServicesWithInputCompose[A, DIAGONAL_TYPE, tail.SERVICE_WITH_INPUT_TYPE[A]]
-  type SERVICES_WITH_OUTPUT_TYPE[A] = ServicesWithOutputCompose[DIAGONAL_TYPE, A, tail.SERVICES_WITH_OUTPUT_TYPE[A]]
+  type L2D                          = ServicesWithInput2DCompose[SI[TYPE], tail.L2D]
+  type SERVICE_WITH_INPUT_TYPE[A]   = ServicesWithInputCompose[A, TYPE, tail.SERVICE_WITH_INPUT_TYPE[A]]
+  type SERVICES_WITH_OUTPUT_TYPE[A] = ServicesWithOutputCompose[TYPE, A, tail.SERVICES_WITH_OUTPUT_TYPE[A]]
 
   def appendType[NEXT_TYPE: ClassTag](
     nextservicesWithInput: this.SERVICE_WITH_INPUT_TYPE[NEXT_TYPE],
