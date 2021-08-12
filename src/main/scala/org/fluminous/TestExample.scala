@@ -1,6 +1,6 @@
 package org.fluminous
 
-import org.fluminous.matrix.{RuntimeConstructor, Service}
+import org.fluminous.matrix.{ServiceCollection, Service}
 
 case class Customer(name: String, age: Int)
 
@@ -17,7 +17,7 @@ object TestExample {
     val getCustomerByAgeService  = Service[Int, Customer]("get_customer_by_age", age => Customer("testCustomer", age))
     val getCustomerByNameService = Service[String, Customer]("get_customer_by_name", name => Customer(name, 25))
     val serviceMatrix =
-      RuntimeConstructor()
+      ServiceCollection()
         .addType[Int]
         .addType[String]
         .addType[Customer]
