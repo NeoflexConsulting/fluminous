@@ -18,8 +18,8 @@ final case class ExecuteFirstService(serviceName: String, outputVariableName: St
 final case class ExecuteCondition(
   conditionName: String,
   inputVariableName: String,
-  ifTrueStep: RoutingStep,
-  ifFalseStep: RoutingStep)
+  ifTrueStep: IntermediateStep,
+  ifFalseStep: IntermediateStep)
     extends IntermediateStep
 
 final case class ExecuteService(
@@ -29,4 +29,4 @@ final case class ExecuteService(
   nextStep: IntermediateStep)
     extends IntermediateStep
 
-final case class Finish(inputVariableName: String) extends IntermediateStep
+final case class Finish(outputVariableName: String) extends IntermediateStep

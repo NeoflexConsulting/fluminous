@@ -6,7 +6,7 @@ import scala.reflect.ClassTag
 
 case class Condition[A: ClassTag](
   conditionName: String,
-  condition: A => Either[ServiceException, Boolean],
+  check: A => Either[ServiceException, Boolean],
   inputTypeName: String) {
 
   def this(conditionName: String, condition: A => Either[ServiceException, Boolean]) = {
@@ -17,9 +17,9 @@ case class Condition[A: ClassTag](
     val outer = this
     def runtimeCondition(variable: Variable): Either[ServiceException, Boolean] = {
       if (variable.typeName != this.inputTypeName)
-        Left(IncompatibleTypeException(this.conditionName, this.inputTypeName, variable.typeName))
+        Left(new IncompatibleTypeException(this.conditionName, this.inputTypeName, variable.typeName))
       else
-        outer.condition(variable.value.asInstanceOf[A])
+        outer.check(variable.value.asInstanceOf[A])
     }
     new Condition[Variable](conditionName, runtimeCondition, this.inputTypeName)
   }

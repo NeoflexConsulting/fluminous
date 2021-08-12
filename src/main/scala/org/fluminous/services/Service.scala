@@ -21,7 +21,7 @@ sealed abstract class Service[IN: ClassTag, OUT: ClassTag](
     val outer = this
     def runtimeInvoke(request: Variable, outputVariableName: String): Either[ServiceException, Variable] = {
       if (request.typeName != this.inputTypeName)
-        Left(IncompatibleTypeException(this.name, this.inputTypeName, request.typeName))
+        Left(new IncompatibleTypeException(this.name, this.inputTypeName, request.typeName))
       else
         outer.invoke(request.value.asInstanceOf[IN]).map(Variable(outputVariableName, outputTypeName, _))
     }
