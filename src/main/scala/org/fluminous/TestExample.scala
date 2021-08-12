@@ -7,6 +7,7 @@ case class Customer(name: String, age: Int)
 
 object TestExample {
   def main(args: Array[String]): Unit = {
+    //Services
     val upperCaseService         = Service[String, String]("upper", _.toUpperCase)
     val incrementService         = Service[Int, Int]("increment", _ + 1)
     val toStringService          = Service[Int, String]("to_string", _.toString)
@@ -17,7 +18,8 @@ object TestExample {
     val getCustomerByAgeService  = Service[Int, Customer]("get_customer_by_age", age => Customer("testCustomer", age))
     val getCustomerByNameService = Service[String, Customer]("get_customer_by_name", name => Customer(name, 25))
 
-    val serviceMatrix =
+    //Filling service collection
+    val serviceCollection =
       ServiceCollection()
         .addType[Int]
         .addType[String]
@@ -32,12 +34,15 @@ object TestExample {
         .addService(getCustomerByAgeService)
         .addService(getCustomerByNameService)
 
+    //Routing information
     val routing = ExecuteFirstService(
       "upper",
       "upperName",
       ExecuteService("get_customer_by_name", "upperName", "result", Finish("result"))
     )
-    val router = serviceMatrix.toRouter[String, Customer]
+    //Creating router
+    val router = serviceCollection.toRouter[String, Customer]
+
     val result = router.routeRequest("Иван", routing)
     println(result)
 

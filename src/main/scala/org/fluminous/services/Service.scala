@@ -5,28 +5,24 @@ import org.fluminous.runtime.exception.{ IncompatibleTypeException, ServiceExcep
 
 import scala.reflect.ClassTag
 
-sealed abstract class Service[IN: ClassTag, OUT: ClassTag](
-  val name: String,
-  val inputTypeName: String,
-  val outputTypeName: String) {
-  def this(serviceName: String) = {
-    this(
-      serviceName,
-      implicitly[ClassTag[IN]].runtimeClass.getClass.getTypeName,
-      implicitly[ClassTag[OUT]].runtimeClass.getClass.getTypeName
-    )
-  }
+sealed abstract class Service[IN: ClassTag, OUT: ClassTag](val name: String) {
+  protected val inputTypeName  = implicitly[ClassTag[IN]].runtimeClass.getClass.getTypeName
+  protected val outputTypeName = implicitly[ClassTag[OUT]].runtimeClass.getClass.getTypeName
+
   def invoke(request: IN): Either[ServiceException, OUT]
-  def toRuntimeService: RuntimeService = {
-    val outer = this
-    def runtimeInvoke(request: Variable, outputVariableName: String): Either[ServiceException, Variable] = {
-      if (request.typeName != this.inputTypeName)
-        Left(new IncompatibleTypeException(this.name, this.inputTypeName, request.typeName))
-      else
-        outer.invoke(request.value.asInstanceOf[IN]).map(Variable(outputVariableName, outputTypeName, _))
-    }
-    new RuntimeService(runtimeInvoke)
+  def toRuntimeService: RuntimeService = new RuntimeService(runtimeInvoke)
+  private def runtimeInvoke(request: Variable, outputVariableName: String): Either[ServiceException, Variable] = {
+
+    if (request.typeName != inputTypeName)
+      Left(new IncompatibleTypeException(this.name, inputTypeName, request.typeName))
+    else
+      invoke(request.value.asInstanceOf[IN]).map(Variable(outputVariableName, outputTypeName, _))
   }
+}
+
+final class FunctionService[IN: ClassTag, OUT: ClassTag](val function: IN => OUT, name: String)
+    extends Service[IN, OUT](name) {
+  override def invoke(request: IN): Either[ServiceException, OUT] = Right(function(request))
 }
 
 final class RuntimeService(val invokeOuter: (Variable, String) => Either[ServiceException, Variable]) {
@@ -37,8 +33,6 @@ final class RuntimeService(val invokeOuter: (Variable, String) => Either[Service
 
 object Service {
   def apply[IN: ClassTag, OUT: ClassTag](serviceName: String, func: IN => OUT): Service[IN, OUT] = {
-    new Service[IN, OUT](serviceName) {
-      override def invoke(request: IN): Either[ServiceException, OUT] = Right(func(request))
-    }
+    new FunctionService[IN, OUT](func, serviceName)
   }
 }
