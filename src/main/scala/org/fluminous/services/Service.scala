@@ -6,8 +6,8 @@ import org.fluminous.runtime.exception.{ IncompatibleTypeException, ServiceExcep
 import scala.reflect.ClassTag
 
 sealed abstract class Service[IN: ClassTag, OUT: ClassTag](val name: String) {
-  protected val inputTypeName  = implicitly[ClassTag[IN]].runtimeClass.getClass.getTypeName
-  protected val outputTypeName = implicitly[ClassTag[OUT]].runtimeClass.getClass.getTypeName
+  protected val inputTypeName  = implicitly[ClassTag[IN]].runtimeClass.getTypeName
+  protected val outputTypeName = implicitly[ClassTag[OUT]].runtimeClass.getTypeName
 
   def invoke(request: IN): Either[ServiceException, OUT]
   def toRuntimeService: RuntimeService = new RuntimeService(runtimeInvoke)
