@@ -1,6 +1,6 @@
 package org.fluminous
 
-import org.fluminous.matrix.{ RuntimeConstructor, Service }
+import org.fluminous.matrix.{RuntimeConstructor, Service}
 
 case class Customer(name: String, age: Int)
 

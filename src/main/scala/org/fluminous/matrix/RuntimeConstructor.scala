@@ -8,10 +8,10 @@ import scala.reflect.ClassTag
 
 case class RuntimeConstructor[L <: HList] private (private val tags: L, private val runtime: Map[String, TypeInfo]) {
   type HListType = L
-  def addType[A: ClassTag]/*(
+  def addType[A: ClassTag](
     implicit ev: IsDistinct[ClassTag[A] :: HListType]
-  )*/: RuntimeConstructor[ClassTag[A] :: HListType] = {
-    val tag      = implicitly[ClassTag[A]]
+  ): RuntimeConstructor[ClassTag[A] :: HListType] = {
+    val tag = implicitly[ClassTag[A]]
     val typeName = tag.runtimeClass.getTypeName
     new RuntimeConstructor(tag :: tags, this.runtime.updated(typeName, TypeInfo.forType[A]))
   }

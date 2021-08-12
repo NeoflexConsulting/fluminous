@@ -19,7 +19,7 @@ object IsDistinct {
 
   implicit def hlistIsDistinct[U, L <: HList](
     implicit d: IsDistinct[L],
-    nc: NotContainsConstraint[L, U]
+    nc: NotContains[L, U]
   ): IsDistinct[U :: L] =
     new IsDistinct[U :: L] {}
 }
