@@ -1,10 +1,6 @@
 package org.fluminous
 
-import org.fluminous.matrix.{ Service, ServiceMatrix, ServicesWithInput, ServicesWithOutput }
-
-class NotFoundException extends Exception
-
-// TODO Implement Unique typeclasses
+import org.fluminous.matrix.{ RuntimeConstructor, Service }
 
 case class Customer(name: String, age: Int)
 
@@ -20,21 +16,22 @@ object TestExample {
     val increaseAgeService       = Service[Customer, Customer]("increase_age", c => c.copy(age = c.age + 1))
     val getCustomerByAgeService  = Service[Int, Customer]("get_customer_by_age", age => Customer("testCustomer", age))
     val getCustomerByNameService = Service[String, Customer]("get_customer_by_name", name => Customer(name, 25))
-
-    val fromIntServices      = ServicesWithInput(toStringService)
-    val toIntServices        = ServicesWithOutput(toIntService)
-    val fromCustomerServices = ServicesWithInput(getNameService).append(Seq(getAgeService))
-    val toCustomerServices   = ServicesWithOutput(getCustomerByNameService).append(Seq(getCustomerByAgeService))
-
-    val serviceMatrix = ServiceMatrix(upperCaseService)
-
-    val bigServiceMatrix =
-      serviceMatrix
-        .appendType(fromIntServices, toIntServices, Seq(incrementService))
-        .appendType(fromCustomerServices, toCustomerServices, Seq(increaseAgeService))
-
+    val serviceMatrix =
+      RuntimeConstructor()
+        .addType[Int]
+        .addType[String]
+        .addType[Customer]
+        .addService(upperCaseService)
+        .addService(incrementService)
+        .addService(toStringService)
+        .addService(toIntService)
+        .addService(getAgeService)
+        .addService(getNameService)
+        .addService(increaseAgeService)
+        .addService(getCustomerByAgeService)
+        .addService(getCustomerByNameService)
     for {
-      executionRuntime <- bigServiceMatrix.toExecutionRuntime
+      executionRuntime <- serviceMatrix.toExecutionRuntime
     } {
       println(executionRuntime)
       executionRuntime.invokeService("upper", "upper_cased")

@@ -78,7 +78,9 @@ final case class ServiceMatrixCompose[SI <: ServicesWithInput[TYPE], TYPE: Class
   def toExecutionRuntime: Either[ExecutionRuntimeException, ExecutionRuntime] = {
     val matrixRuntime = toTypeInfoSeq(Seq.empty)
     Right(new ExecutionRuntime {
-      override val runtime: Seq[TypeInfo] = matrixRuntime
+      override val runtime: Map[String, TypeInfo] = matrixRuntime.groupBy(_.typeName).flatMap {
+        case (name, typeInfo) => typeInfo.headOption.map(t => (name, t))
+      }
     })
   }
 }
