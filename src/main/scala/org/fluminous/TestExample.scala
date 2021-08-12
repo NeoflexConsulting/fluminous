@@ -1,6 +1,7 @@
 package org.fluminous
 
-import org.fluminous.matrix.{Service, ServiceCollection}
+import org.fluminous.routing.{ ExecuteFirstService, ExecuteService, Finish }
+import org.fluminous.services.{ Service, ServiceCollection }
 
 case class Customer(name: String, age: Int)
 
@@ -31,11 +32,14 @@ object TestExample {
         .addService(getCustomerByAgeService)
         .addService(getCustomerByNameService)
 
-    for {
-      executionRuntime <- serviceMatrix.toExecutionRuntime
-    } {
-      println(executionRuntime)
-      executionRuntime.invokeService("upper", "upper_cased")
-    }
+    val routing = ExecuteFirstService(
+      "upper",
+      "upperName",
+      ExecuteService("get_customer_by_name", "upperName", "result", Finish("result"))
+    )
+    val router = serviceMatrix.toRouter[String, Customer]
+    val result = router.routeRequest("Иван", routing)
+    println(result)
+
   }
 }

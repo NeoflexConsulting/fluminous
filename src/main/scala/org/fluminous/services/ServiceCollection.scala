@@ -1,7 +1,7 @@
-package org.fluminous.matrix
+package org.fluminous.services
 
-import org.fluminous.runtime.exception.ExecutionRuntimeException
-import org.fluminous.runtime.{ Condition, ExecutionRuntime, TypeInfo }
+import org.fluminous.runtime.exception.{ ExecutionRuntimeException, ServiceException, VariableNotFoundException }
+import org.fluminous.runtime.{ Condition, ExecutionRuntime, Router, TypeInfo, UnpreparedExecutionRuntime }
 import shapeless._
 
 import scala.reflect.ClassTag
@@ -11,7 +11,7 @@ case class ServiceCollection[L <: HList] private (private val tags: L, private v
   def addType[A: ClassTag](
     implicit ev: IsDistinct[ClassTag[A] :: HListType]
   ): ServiceCollection[ClassTag[A] :: HListType] = {
-    val tag = implicitly[ClassTag[A]]
+    val tag      = implicitly[ClassTag[A]]
     val typeName = tag.runtimeClass.getTypeName
     new ServiceCollection(tag :: tags, this.runtime.updated(typeName, TypeInfo.forType[A]))
   }
@@ -39,13 +39,27 @@ case class ServiceCollection[L <: HList] private (private val tags: L, private v
     ServiceCollection(tags, this.runtime.updated(inputClass, updatedTypeInfo))
   }
 
-  def toExecutionRuntime: Either[ExecutionRuntimeException, ExecutionRuntime] = {
-    val outer = this
-    Right(
-      new ExecutionRuntime {
-        override protected val runtime: Map[String, TypeInfo] = outer.runtime
+  def toRouter[Rq: ClassTag, Rs: ClassTag](
+    implicit evRq: Contains[HListType, ClassTag[Rq]],
+    evRs: Contains[HListType, ClassTag[Rs]]
+  ): Router[Rq, Rs] = {
+    val inputTypeName  = implicitly[ClassTag[Rq]].runtimeClass.getTypeName
+    val outputTypeName = implicitly[ClassTag[Rs]].runtimeClass.getTypeName
+    val setter: Rq => Map[String, TypeInfo] = { request =>
+      val updatedTypeInfo = this.runtime.getOrElse(inputTypeName, TypeInfo.forType[Rq]).copy(inputValue = Some(request))
+      this.runtime.updated(inputTypeName, updatedTypeInfo)
+    }
+    val getter: (String, Map[String, TypeInfo]) => Either[ExecutionRuntimeException, Rs] = { (variableName, rt) =>
+      {
+        rt.getOrElse(outputTypeName, TypeInfo.forType[Rs])
+          .variables
+          .get(variableName)
+          .map(_.value.asInstanceOf[Rs])
+          .toRight(new VariableNotFoundException(variableName, outputTypeName))
+
       }
-    )
+    }
+    new Router[Rq, Rs](new UnpreparedExecutionRuntime[Rq, Rs](setter, getter))
   }
 }
 

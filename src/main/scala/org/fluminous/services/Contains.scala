@@ -1,4 +1,4 @@
-package org.fluminous.matrix
+package org.fluminous.services
 
 import scala.annotation.implicitNotFound
 import shapeless.{ ::, HList }

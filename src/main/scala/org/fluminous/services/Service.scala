@@ -1,4 +1,4 @@
-package org.fluminous.matrix
+package org.fluminous.services
 
 import org.fluminous.runtime.Variable
 import org.fluminous.runtime.exception.{ IncompatibleTypeException, ServiceException }
