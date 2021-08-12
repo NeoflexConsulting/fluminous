@@ -1,12 +1,11 @@
 package org.fluminous
 
-import org.fluminous.matrix.{ServiceCollection, Service}
+import org.fluminous.matrix.{Service, ServiceCollection}
 
 case class Customer(name: String, age: Int)
 
 object TestExample {
   def main(args: Array[String]): Unit = {
-
     val upperCaseService         = Service[String, String]("upper", _.toUpperCase)
     val incrementService         = Service[Int, Int]("increment", _ + 1)
     val toStringService          = Service[Int, String]("to_string", _.toString)
@@ -16,6 +15,7 @@ object TestExample {
     val increaseAgeService       = Service[Customer, Customer]("increase_age", c => c.copy(age = c.age + 1))
     val getCustomerByAgeService  = Service[Int, Customer]("get_customer_by_age", age => Customer("testCustomer", age))
     val getCustomerByNameService = Service[String, Customer]("get_customer_by_name", name => Customer(name, 25))
+
     val serviceMatrix =
       ServiceCollection()
         .addType[Int]
@@ -30,6 +30,7 @@ object TestExample {
         .addService(increaseAgeService)
         .addService(getCustomerByAgeService)
         .addService(getCustomerByNameService)
+
     for {
       executionRuntime <- serviceMatrix.toExecutionRuntime
     } {

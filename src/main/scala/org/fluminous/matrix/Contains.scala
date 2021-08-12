@@ -5,7 +5,7 @@ import shapeless.{ ::, HList }
 
 @implicitNotFound(
   "Implicit not found: Contains[${L}, ${U}]. " +
-    "HList does not contains service type ${U}"
+    "Service collection does not contain type ${U}"
 )
 trait Contains[L <: HList, U]
 

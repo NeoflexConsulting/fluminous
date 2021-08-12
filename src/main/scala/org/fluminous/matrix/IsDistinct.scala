@@ -6,8 +6,8 @@ import scala.annotation.implicitNotFound
 
 @implicitNotFound(
   "Implicit not found: " +
-    "shapeless.IsDistinct[${L}]. " +
-    "Some elements have the same type."
+    "IsDistinct[${L}]. " +
+    "Service collection already contains type ${L}"
 )
 trait IsDistinct[L <: HList] extends Serializable
 
