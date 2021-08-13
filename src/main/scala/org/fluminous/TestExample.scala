@@ -1,7 +1,8 @@
 package org.fluminous
 
-import org.fluminous.routing.{ ExecuteFirstService, ExecuteService, Finish }
-import org.fluminous.services.{ Service, ServiceCollection }
+import cats.Id
+import org.fluminous.routing.{ExecuteFirstService, ExecuteService, Finish}
+import org.fluminous.services.{Service, ServiceCollection}
 
 case class Customer(name: String, age: Int)
 
@@ -20,7 +21,7 @@ object TestExample {
 
     //Filling service collection
     val serviceCollection =
-      ServiceCollection()
+      ServiceCollection[Id]()
         .addType[Int]
         .addType[String]
         .addType[Customer]

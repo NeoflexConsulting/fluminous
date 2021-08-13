@@ -2,27 +2,27 @@ package org.fluminous.runtime
 
 import Condition.RuntimeCondition
 import org.fluminous.services.{ RuntimeService, Service }
-
+import cats.Monad
 import scala.reflect.ClassTag
 
-case class TypeInfo(
+case class TypeInfo[F[_]: Monad](
   typeName: String,
   inputValue: Option[Any],
   variables: Map[String, Variable],
-  services: Map[String, RuntimeService],
+  services: Map[String, RuntimeService[F]],
   conditions: Map[String, RuntimeCondition]) {}
 
 object TypeInfo {
-  def forType[A: ClassTag]: TypeInfo = {
+  def forType[F[_]: Monad, A: ClassTag]: TypeInfo[F] = {
     TypeInfo(
       implicitly[ClassTag[A]].runtimeClass.getTypeName,
       None,
       Map.empty[String, Variable],
-      Map.empty[String, RuntimeService],
+      Map.empty[String, RuntimeService[F]],
       Map.empty[String, RuntimeCondition]
     )
   }
-  def forType[A: ClassTag](services: Seq[Service[A, _]], conditions: Seq[Condition[A]]): TypeInfo = {
+  def forType[F[_]: Monad, A: ClassTag](services: Seq[Service[F, A, _]], conditions: Seq[Condition[A]]): TypeInfo[F] = {
     TypeInfo(
       implicitly[ClassTag[A]].runtimeClass.getTypeName,
       None,

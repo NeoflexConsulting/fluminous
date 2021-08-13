@@ -1,10 +1,11 @@
 package org.fluminous.runtime
 
-import org.fluminous.runtime.exception.{ExecutionRuntimeException, ServiceException}
+import cats.Monad
+import org.fluminous.runtime.exception.{ ExecutionRuntimeException, ServiceException }
 
-class UnpreparedExecutionRuntime[Rq, Rs](
-  private val inputSetter: Rq => Map[String, TypeInfo],
-  private val outputGetter: (String, Map[String, TypeInfo]) => Either[ExecutionRuntimeException, Rs]) {
-  def setInput(input: Rq): ExecutionRuntime[Rs] =
-    new ExecutionRuntime[Rs](this.inputSetter(input), this.outputGetter)
+class UnpreparedExecutionRuntime[F[_]: Monad, Rq, Rs](
+  private val inputSetter: Rq => Map[String, TypeInfo[F]],
+  private val outputGetter: (String, Map[String, TypeInfo[F]]) => Either[ExecutionRuntimeException, Rs]) {
+  def setInput(input: Rq): ExecutionRuntime[F, Rs] =
+    new ExecutionRuntime[F, Rs](this.inputSetter(input), this.outputGetter)
 }

@@ -1,32 +1,31 @@
 package org.fluminous.runtime
 
+import cats.Monad
+import cats.data.EitherT
 import org.fluminous.routing.{
   ExecuteCondition,
   ExecuteFirstCondition,
   ExecuteFirstService,
   ExecuteService,
   Finish,
-  FirstStep,
-  IntermediateStep
+  FirstStep
 }
-import org.fluminous.runtime.exception.{ ExecutionRuntimeException, ServiceException }
+import org.fluminous.runtime.exception.ExecutionRuntimeException
 
-import scala.annotation.tailrec
-
-class Router[Rq, Rs](private val initialRuntime: UnpreparedExecutionRuntime[Rq, Rs]) {
-  def routeRequest(input: Rq, routing: FirstStep): Either[ExecutionRuntimeException, Rs] = {
+class Router[F[_]: Monad, Rq, Rs](private val initialRuntime: UnpreparedExecutionRuntime[F, Rq, Rs]) {
+  def routeRequest(input: Rq, routing: FirstStep): F[Either[ExecutionRuntimeException, Rs]] = {
     val rc = executeFirstStep(routing, initialRuntime.setInput(input))
-    executeNextStep(rc)
+    executeNextStep(rc).value
   }
 
   private def executeFirstStep(
     routing: FirstStep,
-    er: ExecutionRuntime[Rs]
-  ): Either[ExecutionRuntimeException, RouterContext[Rs]] = {
+    er: ExecutionRuntime[F, Rs]
+  ): EitherT[F, ExecutionRuntimeException, RouterContext[F, Rs]] = {
     routing match {
       case ExecuteFirstCondition(conditionName, ifTrueStep, ifFalseStep) =>
         for {
-          conditionIsMet <- er.executeFirstCondition(conditionName)
+          conditionIsMet <- EitherT.fromEither[F](er.executeFirstCondition(conditionName))
         } yield {
           if (conditionIsMet) RouterContext(ifTrueStep, er) else RouterContext(ifFalseStep, er)
         }
@@ -36,25 +35,22 @@ class Router[Rq, Rs](private val initialRuntime: UnpreparedExecutionRuntime[Rq, 
     }
   }
 
-  @tailrec
   private def executeNextStep(
-    routeContext: Either[ExecutionRuntimeException, RouterContext[Rs]]
-  ): Either[ExecutionRuntimeException, Rs] = {
-    routeContext match {
-      case Left(ex) => Left(ex)
-      case Right(rc) =>
-        rc.nextStep match {
-          case Finish(outputVariableName) => rc.er.getOutput(outputVariableName)
-          case _                          => executeNextStep(routeContext.flatMap(executeAction))
-        }
+    routeContext: EitherT[F, ExecutionRuntimeException, RouterContext[F, Rs]]
+  ): EitherT[F, ExecutionRuntimeException, Rs] = {
+    routeContext.flatMap { rc =>
+      rc.nextStep match {
+        case Finish(outputVariableName) => EitherT.fromEither(rc.er.getOutput(outputVariableName))
+        case _                          => executeNextStep(routeContext.flatMap(executeAction))
+      }
     }
   }
 
-  private def executeAction(rc: RouterContext[Rs]): Either[ExecutionRuntimeException, RouterContext[Rs]] = {
+  private def executeAction(rc: RouterContext[F, Rs]): EitherT[F, ExecutionRuntimeException, RouterContext[F, Rs]] = {
     rc.nextStep match {
       case ExecuteCondition(conditionName, inputVariableName, ifTrueStep, ifFalseStep) =>
         for {
-          conditionIsMet <- rc.er.executeCondition(conditionName, inputVariableName)
+          conditionIsMet <- EitherT.fromEither[F](rc.er.executeCondition(conditionName, inputVariableName))
         } yield {
           if (conditionIsMet) RouterContext(ifTrueStep, rc.er) else RouterContext(ifFalseStep, rc.er)
         }
