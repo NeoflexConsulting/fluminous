@@ -1,7 +1,7 @@
 package org.fluminous.services
 
-import org.fluminous.runtime.exception.{ ExecutionRuntimeException, ServiceException, VariableNotFoundException }
-import org.fluminous.runtime.{ Condition, ExecutionRuntime, Router, TypeInfo, UnpreparedExecutionRuntime }
+import org.fluminous.runtime.exception.{ ExecutionRuntimeException, VariableNotFoundException }
+import org.fluminous.runtime.{Router, TypeInfo, ExecutionRuntimeTemplate }
 import shapeless._
 import cats.Monad
 import scala.reflect.ClassTag
@@ -62,7 +62,7 @@ case class ServiceCollection[F[_]: Monad, L <: HList] private (
 
       }
     }
-    new Router[F, Rq, Rs](new UnpreparedExecutionRuntime[F, Rq, Rs](setter, getter))
+    new Router[F, Rq, Rs](new ExecutionRuntimeTemplate[F, Rq, Rs](setter, getter))
   }
 }
 

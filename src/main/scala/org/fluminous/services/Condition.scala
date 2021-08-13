@@ -1,6 +1,7 @@
-package org.fluminous.runtime
+package org.fluminous.services
 
-import org.fluminous.runtime.exception.{ IncompatibleTypeException, ServiceException }
+import org.fluminous.runtime.Variable
+import org.fluminous.runtime.exception.{IncompatibleTypeException, ServiceException}
 
 import scala.reflect.ClassTag
 

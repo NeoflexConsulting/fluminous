@@ -1,8 +1,9 @@
 package org.fluminous.runtime
 
-import Condition.RuntimeCondition
-import org.fluminous.services.{ RuntimeService, Service }
+import org.fluminous.services.{ Condition, RuntimeService, Service }
 import cats.Monad
+import org.fluminous.services.Condition.RuntimeCondition
+
 import scala.reflect.ClassTag
 
 case class TypeInfo[F[_]: Monad](
