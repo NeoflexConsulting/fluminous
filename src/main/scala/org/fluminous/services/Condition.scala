@@ -1,7 +1,7 @@
 package org.fluminous.services
 
 import org.fluminous.runtime.Variable
-import org.fluminous.runtime.exception.{IncompatibleTypeException, ServiceException}
+import org.fluminous.runtime.exception.{ IncompatibleTypeException, ServiceException }
 
 import scala.reflect.ClassTag
 
@@ -11,7 +11,7 @@ case class Condition[A: ClassTag](
   inputTypeName: String) {
 
   def this(conditionName: String, condition: A => Either[ServiceException, Boolean]) = {
-    this(conditionName, condition, implicitly[ClassTag[A]].runtimeClass.getClass.getTypeName)
+    this(conditionName, condition, implicitly[ClassTag[A]].runtimeClass.getTypeName)
   }
 
   def toRuntimeCondition: Condition[Variable] = {
@@ -28,4 +28,9 @@ case class Condition[A: ClassTag](
 
 object Condition {
   type RuntimeCondition = Condition[Variable]
+
+  def apply[A: ClassTag](conditionName: String)(func: A => Boolean): Condition[A] = {
+    new Condition[A](conditionName, func.andThen(Right(_)))
+  }
+
 }

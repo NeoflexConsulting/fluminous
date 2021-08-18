@@ -1,0 +1,46 @@
+{
+  "id": "sampleWorkflow",
+  "version": "1.0",
+  "specVersion": "0.7",
+  "name": "Sample Workflow",
+  "description": "Sample Workflow",
+  "start": "InitialState",
+  "states": [
+    {
+      "name": "InitialState",
+      "type": "operation",
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "upper"
+          },
+          "actionDataFilter": {
+            "toStateData": "${upperInput}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RejectApplication",
+      "type": "operation",
+      "actionMode": "sequential",
+      //Unsupported only sequential
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "sendRejectionEmailFunction"
+          },
+          "actionDataFilter": {
+            "fromStateData": "${input}",
+            "toStateData": "${output}"
+          }
+        }
+      ],
+      "end": true
+    }
+  ],
+  "functions": [],
+  "events": [],
+  "errors": [],
+  "retries": []
+}

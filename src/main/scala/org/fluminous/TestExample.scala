@@ -1,8 +1,8 @@
 package org.fluminous
 
 import cats.Id
-import org.fluminous.routing.{ExecuteFirstService, ExecuteService, Finish}
-import org.fluminous.services.{Service, ServiceCollection}
+import org.fluminous.routing.{ ExecuteCondition, ExecuteFirstService, ExecuteService, Finish }
+import org.fluminous.services.{ Condition, Service, ServiceCollection }
 
 case class Customer(name: String, age: Int)
 
@@ -18,6 +18,7 @@ object TestExample {
     val increaseAgeService       = Service[Customer, Customer]("increase_age", c => c.copy(age = c.age + 1))
     val getCustomerByAgeService  = Service[Int, Customer]("get_customer_by_age", age => Customer("testCustomer", age))
     val getCustomerByNameService = Service[String, Customer]("get_customer_by_name", name => Customer(name, 25))
+    val isNumber                 = Condition[String]("is_number")( _.forall(_.isDigit))
 
     //Filling service collection
     val serviceCollection =
@@ -34,18 +35,30 @@ object TestExample {
         .addService(increaseAgeService)
         .addService(getCustomerByAgeService)
         .addService(getCustomerByNameService)
+        .addCondition(isNumber)
 
     //Routing information
     val routing = ExecuteFirstService(
       "upper",
-      "upperName",
-      ExecuteService("get_customer_by_name", "upperName", "result", Finish("result"))
+      "upperInput",
+      ExecuteCondition(
+        "is_number",
+        "upperInput",
+        ExecuteService(
+          "to_int",
+          "upperInput",
+          "age",
+          ExecuteService("get_customer_by_age", "age", "result", Finish("result"))
+        ),
+        ExecuteService("get_customer_by_name", "upperInput", "result", Finish("result"))
+      )
     )
     //Creating router
-    val router = serviceCollection.toRouter[String, Customer]
-
-    val result = router.routeRequest("Иван", routing)
-    println(result)
+    val router  = serviceCollection.toRouter[String, Customer]
+    val result1 = router.routeRequest("Иван", routing)
+    println(result1)
+    val result2 = router.routeRequest("12", routing)
+    println(result2)
 
   }
 }
