@@ -1,8 +1,11 @@
 package org.fluminous
 
 import cats.Id
-import org.fluminous.routing.{ ExecuteCondition, ExecuteFirstService, ExecuteService, Finish }
+import io.serverlessworkflow.api.workflow.BaseWorkflow
+import org.fluminous.routing.{ ExecuteCondition, ExecuteFirstService, ExecuteService, Finish, Routing }
 import org.fluminous.services.{ Condition, Service, ServiceCollection }
+
+import scala.io.Source
 
 case class Customer(name: String, age: Int)
 
@@ -18,7 +21,7 @@ object TestExample {
     val increaseAgeService       = Service[Customer, Customer]("increase_age", c => c.copy(age = c.age + 1))
     val getCustomerByAgeService  = Service[Int, Customer]("get_customer_by_age", age => Customer("testCustomer", age))
     val getCustomerByNameService = Service[String, Customer]("get_customer_by_name", name => Customer(name, 25))
-    val isNumber                 = Condition[String]("is_number")( _.forall(_.isDigit))
+    val isNumber                 = Condition[String]("is_number")(_.forall(_.isDigit))
 
     //Filling service collection
     val serviceCollection =
@@ -37,8 +40,11 @@ object TestExample {
         .addService(getCustomerByNameService)
         .addCondition(isNumber)
 
+    val json     = Source.fromResource("routing.json").mkString
+    val workflow = BaseWorkflow.fromSource(json)
+    val routing  = Routing.fromWorkflow(workflow)
     //Routing information
-    val routing = ExecuteFirstService(
+    /*    val routing = ExecuteFirstService(
       "upper",
       "upperInput",
       ExecuteCondition(
@@ -52,12 +58,14 @@ object TestExample {
         ),
         ExecuteService("get_customer_by_name", "upperInput", "result", Finish("result"))
       )
-    )
+    )*/
+    routing.left.foreach(_.printStackTrace())
+
     //Creating router
     val router  = serviceCollection.toRouter[String, Customer]
-    val result1 = router.routeRequest("Иван", routing)
+    val result1 = router.routeRequest("Иван", routing.right.get)
     println(result1)
-    val result2 = router.routeRequest("12", routing)
+    val result2 = router.routeRequest("12", routing.right.get)
     println(result2)
 
   }

@@ -1,7 +1,7 @@
 {
   "id": "sampleWorkflow",
   "version": "1.0",
-  "specVersion": "0.7",
+  "schemaVersion": "0.7",
   "name": "Sample Workflow",
   "description": "Sample Workflow",
   "start": "InitialState",
@@ -18,29 +18,72 @@
             "toStateData": "${upperInput}"
           }
         }
-      ]
+      ],
+      "transition": "IsNumber"
     },
     {
-      "name": "RejectApplication",
+      "name": "IsNumber",
+      "type": "switch",
+      "stateDataFilter": {
+        "input": "${upperInput}"
+      },
+      "dataConditions": [
+        {
+          "condition": "${is_number}",
+          "transition": "ToInt"
+        }
+      ],
+      "default": {
+        "transition": "GetCustomerByName"
+      }
+    },
+    {
+      "name": "ToInt",
       "type": "operation",
-      "actionMode": "sequential",
-      //Unsupported only sequential
       "actions": [
         {
           "functionRef": {
-            "refName": "sendRejectionEmailFunction"
+            "refName": "to_int"
           },
           "actionDataFilter": {
-            "fromStateData": "${input}",
-            "toStateData": "${output}"
+            "fromStateData": "${upperInput}",
+            "toStateData": "${age}"
+          }
+        }
+      ],
+      "transition": "GetCustomerByAge"
+    },
+    {
+      "name": "GetCustomerByName",
+      "type": "operation",
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "get_customer_by_name"
+          },
+          "actionDataFilter": {
+            "fromStateData": "${upperInput}",
+            "toStateData": "${result}"
+          }
+        }
+      ],
+      "end": true
+    },
+    {
+      "name": "GetCustomerByAge",
+      "type": "operation",
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "get_customer_by_age"
+          },
+          "actionDataFilter": {
+            "fromStateData": "${age}",
+            "toStateData": "${result}"
           }
         }
       ],
       "end": true
     }
-  ],
-  "functions": [],
-  "events": [],
-  "errors": [],
-  "retries": []
+  ]
 }
