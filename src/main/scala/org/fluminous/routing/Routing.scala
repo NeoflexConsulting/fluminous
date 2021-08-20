@@ -42,7 +42,7 @@ object Routing {
   private def couldBeBuilt(readySteps: Map[String, IntermediateStep])(state: State): Boolean = {
     state match {
       case operationState: OperationState =>
-        nonNull(operationState.getEnd)(_.isTerminate) ||
+        isFinal(operationState) ||
           asOption(operationState.getTransition)(_.getNextState).exists(readySteps.contains)
       case switchState: SwitchState =>
         readySteps.contains(switchState.getDefault.getTransition.getNextState) &&
@@ -156,7 +156,7 @@ object Routing {
     outputVariableName: String,
     readySteps: Map[String, IntermediateStep]
   ): Either[WorkFlowBuildException, IntermediateStep] = {
-    if (nonNull(state.getEnd)(_.isTerminate))
+    if (isFinal(state))
       Right(Finish(outputVariableName))
     else
       readySteps
@@ -179,8 +179,8 @@ object Routing {
     }
   }
 
-  private def nonNull[T](t: T)(f: T => Boolean): Boolean = {
-    if (t != null) f(t) else false
+  private def isFinal(state: OperationState): Boolean = {
+    state.getEnd != null
   }
 
   private def asOption[T, U](t: T)(f: T => U): Option[U] = {
