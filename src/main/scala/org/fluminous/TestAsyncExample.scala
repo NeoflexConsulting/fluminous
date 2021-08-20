@@ -1,11 +1,13 @@
 package org.fluminous
 
-import org.fluminous.routing.{ ExecuteCondition, ExecuteFirstService, ExecuteService, Finish }
+import io.serverlessworkflow.api.workflow.BaseWorkflow
+import org.fluminous.routing.Routing
 import org.fluminous.services.{ AsyncService, Condition, ServiceCollection }
 
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.io.Source
 
 object TestAsyncExample {
   def main(args: Array[String]): Unit = {
@@ -38,34 +40,24 @@ object TestAsyncExample {
         .addService(getCustomerByNameService)
         .addCondition(isNumber)
 
-    //Routing information
-    val routing = ExecuteFirstService(
-      "upper",
-      "upperInput",
-      ExecuteCondition(
-        "is_number",
-        "upperInput",
-        ExecuteService(
-          "to_int",
-          "upperInput",
-          "age",
-          ExecuteService("get_customer_by_age", "age", "result", Finish("result"))
-        ),
-        ExecuteService("get_customer_by_name", "upperInput", "result", Finish("result"))
-      )
-    )
+    val json     = Source.fromResource("routing.json").mkString
+    val workflow = BaseWorkflow.fromSource(json)
+    val routing  = Routing.fromWorkflow(workflow)
+
     //Creating router
-    val router = serviceCollection.toRouter[String, Customer]
+    routing.foreach { r =>
+      val router = serviceCollection.toRouter[String, Customer]
 
-    val resultFuture1 = router.routeRequest("Иван", routing)
-    println("Awaiting result1.....")
-    val result1 = Await.result(resultFuture1, 60 seconds)
-    println(s"Result1 arrived: $result1")
+      val resultFuture1 = router.routeRequest("Иван", r)
+      println("Awaiting result1.....")
+      val result1 = Await.result(resultFuture1, 60 seconds)
+      println(s"Result1 arrived: $result1")
 
-    val resultFuture2 = router.routeRequest("12", routing)
-    println("Awaiting result2.....")
-    val result2 = Await.result(resultFuture2, 60 seconds)
-    println(s"Result2 arrived: $result2")
+      val resultFuture2 = router.routeRequest("12", r)
+      println("Awaiting result2.....")
+      val result2 = Await.result(resultFuture2, 60 seconds)
+      println(s"Result2 arrived: $result2")
+    }
   }
 
   def wrapToAsync[A, B](func: A => B): A => Future[B] = { a =>

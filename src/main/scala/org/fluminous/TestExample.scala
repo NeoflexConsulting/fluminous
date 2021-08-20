@@ -2,7 +2,7 @@ package org.fluminous
 
 import cats.Id
 import io.serverlessworkflow.api.workflow.BaseWorkflow
-import org.fluminous.routing.{ ExecuteCondition, ExecuteFirstService, ExecuteService, Finish, Routing }
+import org.fluminous.routing.Routing
 import org.fluminous.services.{ Condition, Service, ServiceCollection }
 
 import scala.io.Source
@@ -43,30 +43,15 @@ object TestExample {
     val json     = Source.fromResource("routing.json").mkString
     val workflow = BaseWorkflow.fromSource(json)
     val routing  = Routing.fromWorkflow(workflow)
-    //Routing information
-    /*    val routing = ExecuteFirstService(
-      "upper",
-      "upperInput",
-      ExecuteCondition(
-        "is_number",
-        "upperInput",
-        ExecuteService(
-          "to_int",
-          "upperInput",
-          "age",
-          ExecuteService("get_customer_by_age", "age", "result", Finish("result"))
-        ),
-        ExecuteService("get_customer_by_name", "upperInput", "result", Finish("result"))
-      )
-    )*/
-    routing.left.foreach(_.printStackTrace())
 
     //Creating router
-    val router  = serviceCollection.toRouter[String, Customer]
-    val result1 = router.routeRequest("Иван", routing.right.get)
-    println(result1)
-    val result2 = router.routeRequest("12", routing.right.get)
-    println(result2)
+    routing.foreach { r =>
+      val router  = serviceCollection.toRouter[String, Customer]
+      val result1 = router.routeRequest("Иван", r)
+      println(result1)
+      val result2 = router.routeRequest("12", r)
+      println(result2)
+    }
 
   }
 }

@@ -46,7 +46,7 @@ object Routing {
           asOption(operationState.getTransition)(_.getNextState).exists(readySteps.contains)
       case switchState: SwitchState =>
         readySteps.contains(switchState.getDefault.getTransition.getNextState) &&
-          switchState.getDataConditions.asScala.headOption.map(_.getCondition).exists(readySteps.contains)
+        switchState.getDataConditions.asScala.headOption.map(_.getTransition.getNextState).exists(readySteps.contains)
       case _ => false
     }
   }
