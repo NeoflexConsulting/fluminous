@@ -8,10 +8,10 @@ import org.scalatest.wordspec.AnyWordSpecLike
 class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll with Parser {
   "Parser" should {
     "parse selectors" in {
-      parse(".foo") should be(Right(Seq(Selector(Seq("foo")))))
-      parse(".foo.bar") should be(Right(Seq(Selector(Seq("foo", "bar")))))
-      parse(".foo|.bar") should be(Right(Seq(Selector(Seq("foo", "bar")))))
-      parse(".foo|.bar|.baz") should be(Right(Seq(Selector(Seq("foo", "bar", "baz")))))
+      parse(".foo") should be(Right(Selector(Seq("foo"))))
+      parse(".foo.bar") should be(Right(Selector(Seq("foo", "bar"))))
+      parse(".foo|.bar") should be(Right(Selector(Seq("foo", "bar"))))
+      parse(".foo|.bar|.baz") should be(Right(Selector(Seq("foo", "bar", "baz"))))
     }
   }
 }

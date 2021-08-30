@@ -11,7 +11,7 @@ case object SelectorPattern extends FilterPattern {
     case Root :: _                => true
     case Selector(_) :: _         => true
     case Selector(_) :: Pipe :: _ => true
-    case _                        => false
+    case l @ _                    => FilterCases.isDefinedAt(l)
   }
 
   override val FilterCases: PartialFunction[List[Expression], List[Expression]] = {

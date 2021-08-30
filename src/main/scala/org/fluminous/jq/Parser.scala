@@ -22,8 +22,8 @@ trait Parser {
         Left(ex)
       case (_, Left(ex)) =>
         Left(ex)
-      case (Right((_, None)), Right(state)) =>
-        getFilterFromStack(tokenizer, state)
+      case (Right((updatedTokenizer, None)), Right(state)) =>
+        getFilterFromStack(updatedTokenizer, state)
       case (Right((updatedTokenizer, Some(token))), Right(state)) =>
         parse(updatedTokenizer, applyTokenToStack(token, tokenizer, state))
 
