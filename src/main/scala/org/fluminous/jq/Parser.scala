@@ -36,7 +36,7 @@ trait Parser {
       case (filter: Filter) :: Nil =>
         Right(filter)
       case expr1 :: _ =>
-        Left(ParserException(tokenizer.input.position, s"Invalid input: s$expr1"))
+        Left(ParserException(tokenizer.input.position, s"Invalid input: $expr1"))
     }
   }
 
@@ -56,9 +56,22 @@ trait Parser {
           )
         )
       case pattern :: Nil =>
-        Right(ParserState(FilterPattern.patterns, pattern.instantiateOnStack(newStack)))
+        Right(foldStack(ParserState(FilterPattern.patterns, pattern.instantiateOnStack(newStack))))
       case _ :: _ =>
         Right(ParserState(newFilterPatterns, newStack))
+    }
+  }
+
+  @tailrec
+  private def foldStack(state: ParserState): ParserState = {
+    val newFilterPatterns = state.filterPatterns.filter(_.isSuitableForStack(state.stack))
+    newFilterPatterns match {
+      case Nil =>
+        state
+      case _ :: _ =>
+        state
+      case pattern :: Nil =>
+        foldStack(ParserState(FilterPattern.patterns, pattern.instantiateOnStack(state.stack)))
     }
   }
 
