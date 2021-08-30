@@ -9,15 +9,15 @@ case class Tokenizer(input: InputProvider) {
   }
 
   def allTokens: Either[ParserException, Seq[Token]] = {
-    collectTokens(Seq.empty).map(_.reverse)
+    collectTokens(this, Seq.empty).map(_.reverse)
   }
 
   @tailrec
-  private def collectTokens(tokens: Seq[Token]): Either[ParserException, Seq[Token]] = {
-    nextToken match {
-      case Left(ex)            => Left(ex)
-      case Right((_, None))    => Right(tokens)
-      case Right((_, Some(t))) => collectTokens(t +: tokens)
+  private def collectTokens(tokenizer: Tokenizer, tokens: Seq[Token]): Either[ParserException, Seq[Token]] = {
+    tokenizer.nextToken match {
+      case Left(ex)                    => Left(ex)
+      case Right((_, None))            => Right(tokens)
+      case Right((tokenizer, Some(t))) => collectTokens(tokenizer, t +: tokens)
     }
   }
 
