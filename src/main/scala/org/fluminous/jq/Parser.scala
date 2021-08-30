@@ -49,7 +49,12 @@ trait Parser {
     val newFilterPatterns = state.filterPatterns.filter(_.isSuitableForStack(newStack))
     newFilterPatterns match {
       case Nil =>
-        Left(ParserException(tokenizer.input.position, s"Invalid input: ${state.stack.mkString}"))
+        Left(
+          ParserException(
+            tokenizer.input.position,
+            s"Suitable expression not found. Invalid input: ${state.stack.mkString}"
+          )
+        )
       case pattern :: Nil =>
         Right(ParserState(FilterPattern.patterns, pattern.instantiateOnStack(newStack)))
       case _ :: _ =>
