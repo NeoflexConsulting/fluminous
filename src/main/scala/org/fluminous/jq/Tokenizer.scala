@@ -1,5 +1,9 @@
 package org.fluminous.jq
 
+import org.fluminous.jq
+import org.fluminous.jq.input.{EOF, InputProvider}
+import org.fluminous.jq.tokens.Token
+
 import scala.annotation.tailrec
 
 case class Tokenizer(input: InputProvider) {
@@ -35,14 +39,14 @@ case class Tokenizer(input: InputProvider) {
 
   private def processSymbol(
     state: TokenizerState,
-    symbol: Symbol
+    symbol: jq.input.Symbol
   ): Either[ParserException, (TokenizerState, Option[Token])] = {
     state.currentToken.fold(setNewToken(state, symbol, None))(updateTokenOrCreateNew(state, symbol, _))
   }
 
   private def updateTokenOrCreateNew(
     state: TokenizerState,
-    symbol: Symbol,
+    symbol: jq.input.Symbol,
     token: Token
   ): Either[ParserException, (TokenizerState, Option[Token])] = {
     for {
@@ -62,7 +66,7 @@ case class Tokenizer(input: InputProvider) {
 
   private def setNewToken(
     state: TokenizerState,
-    symbol: Symbol,
+    symbol: jq.input.Symbol,
     previousToken: Option[Token]
   ): Either[ParserException, (TokenizerState, Option[Token])] = {
     Token.newToken(symbol, state.input.position).map(t => (state.setCurrentToken(t), previousToken))

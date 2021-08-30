@@ -1,4 +1,4 @@
-package org.fluminous.jq
+package org.fluminous.jq.input
 
 sealed trait Symbol
 
