@@ -17,7 +17,7 @@ object Token {
       Right(None)
     } else if (SpecialSymbol.symbols.contains(c)) Right(SpecialSymbol.symbols.get(c))
     else if (c == '"') Right(Some(RawString("")))
-    else if (c.isDigit) Right(Some(IntegerNumber(c.toInt)))
+    else if (c.isDigit) Right(Some(IntegerNumber(c.toString)))
     else if (c == Root.char) Right(Some(Root))
     else if (c.isLetter) Right(Some(Identifier(c.toString)))
     else Left(ParserException(position, s"Unsupported character $c"))
@@ -60,7 +60,7 @@ case class Identifier(value: String) extends Token {
     symbol match {
       case EOF =>
         Right(None)
-      case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) =>
+      case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) || c == Root.char =>
         Right(None)
       case Character(c) =>
         Right(Some(Identifier(value :+ c)))
@@ -78,15 +78,15 @@ case class RawString(value: String) extends Token {
   }
 }
 
-case class IntegerNumber(value: Int) extends Token {
+case class IntegerNumber(value: String) extends Token {
   def tryAppend(symbol: Symbol, position: Int): Either[ParserException, Option[Token]] = {
     symbol match {
       case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) =>
         Right(None)
       case Character(c) if c.isDigit =>
-        Right(Some(IntegerNumber(value * 10 + c.toInt)))
-      case Character('.') =>
-        Right(Some(FloatNumber(value)))
+        Right(Some(IntegerNumber(value :+ c)))
+      case c @ Character('.') =>
+        Right(Some(FloatNumber(value :+ c.c)))
       case EOF =>
         Right(None)
       case _ =>
@@ -94,23 +94,24 @@ case class IntegerNumber(value: Int) extends Token {
 
     }
   }
+  def asInt: Int = value.toInt
 }
-case class FloatNumber(value: BigDecimal, fractionalNumber: Int = 0) extends Token {
+case class FloatNumber(value: String) extends Token {
   def tryAppend(symbol: Symbol, position: Int): Either[ParserException, Option[Token]] = {
     symbol match {
       case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) =>
         Right(None)
       case Character(c) if c.isDigit =>
         Right(
-          Some(FloatNumber(value + c.toInt * value * BigDecimal(0.1).pow(fractionalNumber + 1), fractionalNumber + 1))
+          Some(FloatNumber(value :+ c))
         )
       case EOF =>
         Right(None)
       case _ =>
         Left(ParserException(position, "Identifier could not start with number. Try to surround it by quotes"))
-
     }
   }
+  def toDecimal: BigDecimal = BigDecimal(value)
 }
 case object Pipe               extends SpecialSymbol { val char = '|' }
 case object LeftBracket        extends SpecialSymbol { val char = '(' }
