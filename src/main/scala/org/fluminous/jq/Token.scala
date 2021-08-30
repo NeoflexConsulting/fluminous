@@ -16,10 +16,11 @@ object Token {
     if (Token.whitespaceSymbols.contains(c)) {
       Right(None)
     } else if (SpecialSymbol.symbols.contains(c)) Right(SpecialSymbol.symbols.get(c))
-    else if (c == '"') Right(Some(RawString("")))
+    else if (c == '"') Right(Some(RawString("", false)))
     else if (c.isDigit) Right(Some(IntegerNumber(c.toString)))
     else if (c == Root.char) Right(Some(Root))
     else if (c.isLetter) Right(Some(Identifier(c.toString)))
+    else if (c == '-') Right(Some(IntegerNumber("-")))
     else Left(ParserException(position, s"Unsupported character $c"))
   }
 
@@ -41,7 +42,8 @@ object SpecialSymbol {
     LeftFigureBracket,
     RightFigureBracket,
     Colon,
-    OptionalSign
+    OptionalSign,
+    Comma
   ).map(s => (s.char, s)).toMap
 }
 
@@ -68,12 +70,16 @@ case class Identifier(value: String) extends Token {
   }
 }
 
-case class RawString(value: String) extends Token {
+case class RawString(value: String, finished: Boolean = true) extends Token {
   def tryAppend(symbol: Symbol, position: Int): Either[ParserException, Option[Token]] = {
-    symbol match {
-      case Character('"') => Right(None)
-      case Character(c)   => Right(Some(RawString(value :+ c)))
-      case EOF            => Left(ParserException(position, s"String $value doesn't end with quote"))
+    if (finished) {
+      Right(None)
+    } else {
+      symbol match {
+        case Character('"') => Right(Some(RawString(value)))
+        case Character(c)   => Right(Some(RawString(value :+ c, false)))
+        case EOF            => Left(ParserException(position, s"String $value doesn't end with quote"))
+      }
     }
   }
 }
@@ -81,12 +87,14 @@ case class RawString(value: String) extends Token {
 case class IntegerNumber(value: String) extends Token {
   def tryAppend(symbol: Symbol, position: Int): Either[ParserException, Option[Token]] = {
     symbol match {
-      case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) =>
-        Right(None)
       case Character(c) if c.isDigit =>
         Right(Some(IntegerNumber(value :+ c)))
+      case Character(c) if !c.isDigit && value == "-" =>
+        Left(ParserException(position, "Symbol - at invalid position"))
+      case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) =>
+        Right(None)
       case c @ Character('.') =>
-        Right(Some(FloatNumber(value :+ c.c)))
+        Right(Some(DecimalNumber(value :+ c.c)))
       case EOF =>
         Right(None)
       case _ =>
@@ -96,14 +104,14 @@ case class IntegerNumber(value: String) extends Token {
   }
   def asInt: Int = value.toInt
 }
-case class FloatNumber(value: String) extends Token {
+case class DecimalNumber(value: String) extends Token {
   def tryAppend(symbol: Symbol, position: Int): Either[ParserException, Option[Token]] = {
     symbol match {
       case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) =>
         Right(None)
       case Character(c) if c.isDigit =>
         Right(
-          Some(FloatNumber(value :+ c))
+          Some(DecimalNumber(value :+ c))
         )
       case EOF =>
         Right(None)
@@ -122,6 +130,7 @@ case object LeftFigureBracket  extends SpecialSymbol { val char = '{' }
 case object RightFigureBracket extends SpecialSymbol { val char = '}' }
 case object Colon              extends SpecialSymbol { val char = ':' }
 case object OptionalSign       extends SpecialSymbol { val char = '?' }
+case object Comma              extends SpecialSymbol { val char = ',' }
 case object RecursiveDescent extends Token {
   def tryAppend(symbol: Symbol, position: Int): Either[ParserException, Option[Token]] = {
     symbol match {
