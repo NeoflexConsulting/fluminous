@@ -18,5 +18,5 @@ case class DecimalNumber(value: String) extends Token {
         Left(ParserException(position, "Identifier could not start with number. Try to surround it by quotes"))
     }
   }
-  def toDecimal: BigDecimal = BigDecimal(value)
+  def asDecimal: BigDecimal = BigDecimal(value)
 }

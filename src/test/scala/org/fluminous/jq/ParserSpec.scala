@@ -14,6 +14,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
       parse(".foo.bar") should be(Right(Selector(Seq("foo", "bar"))))
       parse(".foo|.bar") should be(Right(Selector(Seq("foo", "bar"))))
       parse(".foo|.bar|.baz") should be(Right(Selector(Seq("foo", "bar", "baz"))))
+      parse("""."foo$"""") should be(Right(Selector(Seq("foo$"))))
     }
   }
 }
