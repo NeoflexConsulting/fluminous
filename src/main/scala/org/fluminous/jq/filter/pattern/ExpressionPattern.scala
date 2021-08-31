@@ -14,6 +14,6 @@ object ExpressionPattern {
     JsonObjectTemplatePattern,
     JsonObjectTemplateConstructorPattern,
     JsonArrayTemplatePattern,
-    JsonObjectTemplateConstructorPattern
+    JsonArrayTemplateConstructorPattern
   )
 }
