@@ -1,7 +1,8 @@
 package org.fluminous.jq.filter
 
+import io.circe.Json
 import org.fluminous.jq.Expression
 
-sealed trait Filter extends Expression
-
-final case class Selector(path: Seq[String]) extends Filter
+trait Filter extends Expression {
+  def transform(input: Json): Option[Json]
+}
