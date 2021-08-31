@@ -2,7 +2,7 @@ package org.fluminous.jq
 
 import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.filter.pattern.FilterPattern
+import org.fluminous.jq.filter.pattern.ExpressionPattern
 import org.fluminous.jq.input.InputProvider
 import org.fluminous.jq.tokens.Token
 import scala.annotation.tailrec
@@ -41,14 +41,14 @@ trait Parser {
   }
 
   private def applyTokenToStack(token: Token, tokenizer: Tokenizer, stack: Stack): Stack = {
-    import FilterPattern._
+    import ExpressionPattern._
     val newStack = token +: stack
     patterns.foldMapK(_.instantiateOnStack(newStack).map(foldStack).getOrElse(newStack))
   }
 
   @tailrec
   private def foldStack(stack: Stack): Stack = {
-    import FilterPattern._
+    import ExpressionPattern._
     patterns.foldMapK(_.instantiateOnStack(stack)) match {
       case None           => stack
       case Some(newStack) => foldStack(newStack)

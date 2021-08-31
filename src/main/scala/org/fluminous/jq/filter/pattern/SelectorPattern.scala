@@ -4,8 +4,8 @@ import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.Selector
 import org.fluminous.jq.tokens.{ Identifier, Pipe, RawString, Root }
 
-case object SelectorPattern extends FilterPattern {
-  override val FilterCases: PartialFunction[List[Expression], List[Expression]] = {
+case object SelectorPattern extends ExpressionPattern {
+  override val ExpressionCases: PartialFunction[List[Expression], List[Expression]] = {
     case Identifier(value) :: Root :: rest =>
       Selector(Seq(value)) :: rest
     case RawString(value, _) :: Root :: rest =>
