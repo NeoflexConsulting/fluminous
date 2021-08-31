@@ -6,31 +6,31 @@ import org.fluminous.jq.filter.pattern.FilterPattern
 import org.fluminous.jq.input.InputProvider
 import org.fluminous.jq.tokens.Token
 import scala.annotation.tailrec
+import cats.syntax.foldable._
+import cats.instances.list._
 
 trait Parser {
+  type Stack = List[Expression]
   def parse(input: InputProvider): Either[ParserException, Filter] = {
     parse(Tokenizer(input))
   }
-
   @tailrec
   private def parse(
     tokenizer: Tokenizer,
-    parserState: Either[ParserException, ParserState] = Right(ParserState())
+    stack: Stack = List.empty
   ): Either[ParserException, Filter] = {
-    (tokenizer.nextToken, parserState) match {
-      case (Left(ex), _) =>
+    tokenizer.nextToken match {
+      case Left(ex) =>
         Left(ex)
-      case (_, Left(ex)) =>
-        Left(ex)
-      case (Right((updatedTokenizer, None)), Right(state)) =>
-        getFilterFromStack(updatedTokenizer, state)
-      case (Right((updatedTokenizer, Some(token))), Right(state)) =>
-        parse(updatedTokenizer, applyTokenToStack(token, tokenizer, state))
-
+      case Right((updatedTokenizer, None)) =>
+        getFilterFromStack(updatedTokenizer, foldStack(stack))
+      case Right((updatedTokenizer, Some(token))) =>
+        parse(updatedTokenizer, applyTokenToStack(token, tokenizer, stack))
     }
   }
-  private def getFilterFromStack(tokenizer: Tokenizer, state: ParserState): Either[ParserException, Filter] = {
-    state.stack match {
+
+  private def getFilterFromStack(tokenizer: Tokenizer, stack: Stack): Either[ParserException, Filter] = {
+    stack match {
       case Nil =>
         Left(ParserException(tokenizer.input.position, "Invalid input: empty"))
       case (filter: Filter) :: Nil =>
@@ -40,43 +40,18 @@ trait Parser {
     }
   }
 
-  private def applyTokenToStack(
-    token: Token,
-    tokenizer: Tokenizer,
-    state: ParserState
-  ): Either[ParserException, ParserState] = {
-    val newStack          = token +: state.stack
-    val newFilterPatterns = state.filterPatterns.filter(_.isSuitableForStack(newStack))
-    newFilterPatterns match {
-      case Nil =>
-        Left(
-          ParserException(
-            tokenizer.input.position,
-            s"Suitable expression not found. Invalid input: ${state.stack.mkString}"
-          )
-        )
-      case pattern :: Nil =>
-        Right(foldStack(ParserState(FilterPattern.patterns, pattern.instantiateOnStack(newStack))))
-      case _ :: _ =>
-        Right(ParserState(newFilterPatterns, newStack))
-    }
+  private def applyTokenToStack(token: Token, tokenizer: Tokenizer, stack: Stack): Stack = {
+    import FilterPattern._
+    val newStack = token +: stack
+    patterns.foldMapK(_.instantiateOnStack(newStack).map(foldStack).getOrElse(newStack))
   }
 
   @tailrec
-  private def foldStack(state: ParserState): ParserState = {
-    val newFilterPatterns = state.filterPatterns.filter(_.isSuitableForStack(state.stack))
-    newFilterPatterns match {
-      case Nil =>
-        state
-      case _ :: _ =>
-        state
-      case pattern :: Nil =>
-        foldStack(ParserState(FilterPattern.patterns, pattern.instantiateOnStack(state.stack)))
+  private def foldStack(stack: Stack): Stack = {
+    import FilterPattern._
+    patterns.foldMapK(_.instantiateOnStack(stack)) match {
+      case None           => stack
+      case Some(newStack) => foldStack(newStack)
     }
   }
-
-  private case class ParserState(
-    filterPatterns: Seq[FilterPattern] = FilterPattern.patterns,
-    stack: List[Expression] = List.empty)
-
 }

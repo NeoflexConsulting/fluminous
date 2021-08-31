@@ -5,15 +5,6 @@ import org.fluminous.jq.filter.Selector
 import org.fluminous.jq.tokens.{ Identifier, Pipe, RawString, Root }
 
 case object SelectorPattern extends FilterPattern {
-
-  override val FilterStartCases: List[Expression] => Boolean = {
-    case Nil                      => true
-    case Root :: _                => true
-    case Selector(_) :: _         => true
-    case Selector(_) :: Pipe :: _ => true
-    case l @ _                    => FilterCases.isDefinedAt(l)
-  }
-
   override val FilterCases: PartialFunction[List[Expression], List[Expression]] = {
     case Identifier(value) :: Root :: rest =>
       Selector(Seq(value)) :: rest

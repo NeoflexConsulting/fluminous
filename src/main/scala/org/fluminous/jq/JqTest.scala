@@ -18,10 +18,8 @@ object JqTest {
 
     val decodedFoo = decode[Foo](json)
     println(decodedFoo)
-    val res        = parse("""{"Qux":{"i":13,"d":14.0}}""")
+    val res = parse("""{"Qux":{"i":13,"d":14.0}}""")
     println(res)
-    res.foreach { j =>
-      
-    }
   }
+
 }
