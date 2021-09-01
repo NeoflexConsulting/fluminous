@@ -5,6 +5,33 @@
   "name": "Sample Workflow",
   "description": "Sample Workflow",
   "start": "InitialState",
+  "functions": [
+    {
+      "name": "upperInput",
+      "operation": "upperInput",
+      "type": "custom"
+    },
+    {
+      "name": "upper",
+      "operation": "upper",
+      "type": "custom"
+    },
+    {
+      "name": "to_int",
+      "operation": "to_int",
+      "type": "custom"
+    },
+    {
+      "name": "get_customer_by_name",
+      "operation": "get_customer_by_name",
+      "type": "custom"
+    },
+    {
+      "name": "get_customer_by_age",
+      "operation": "get_customer_by_age",
+      "type": "custom"
+    }
+  ],
   "states": [
     {
       "name": "InitialState",
@@ -12,10 +39,13 @@
       "actions": [
         {
           "functionRef": {
-            "refName": "upper"
+            "refName": "upper",
+            "arguments": {
+              "input": "${.}"
+            }
           },
           "actionDataFilter": {
-            "toStateData": "${upperInput}"
+            "toStateData": "${ {uppercased: .} }"
           }
         }
       ],
@@ -23,13 +53,32 @@
     },
     {
       "name": "IsNumber",
+      "type": "operation",
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "is_number",
+            "arguments": {
+              "input": "${.uppercased}"
+            }
+          },
+          "actionDataFilter": {
+            "toStateData": "${ {isnumber: .} }"
+          }
+        }
+      ],
+      "transition": "CheckNumber"
+    },
+    {
+      "name": "CheckNumber",
       "type": "switch",
       "stateDataFilter": {
-        "input": "${upperInput}"
+        "input": "${.}",
+        "output": "${.}"
       },
       "dataConditions": [
         {
-          "condition": "${is_number}",
+          "condition": "${.isnumber}",
           "transition": "ToInt"
         }
       ],
@@ -40,14 +89,21 @@
     {
       "name": "ToInt",
       "type": "operation",
+      "stateDataFilter": {
+        "input": "${.uppercased}",
+        "output": "${ {age} }"
+      },
       "actions": [
         {
           "functionRef": {
-            "refName": "to_int"
+            "refName": "to_int",
+            "arguments": {
+              "input": "${.}"
+            }
           },
           "actionDataFilter": {
-            "fromStateData": "${upperInput}",
-            "toStateData": "${age}"
+            "fromStateData": "${.}",
+            "toStateData": "${ {age : .}}"
           }
         }
       ],
@@ -56,14 +112,21 @@
     {
       "name": "GetCustomerByName",
       "type": "operation",
+      "stateDataFilter": {
+        "input": "${.uppercased}",
+        "output": "${ {customer} }"
+      },
       "actions": [
         {
           "functionRef": {
-            "refName": "get_customer_by_name"
+            "refName": "get_customer_by_name",
+            "arguments": {
+              "input": "${.}"
+            }
           },
           "actionDataFilter": {
-            "fromStateData": "${upperInput}",
-            "toStateData": "${result}"
+            "fromStateData": "${.}",
+            "toStateData": "${{customer:.}}"
           }
         }
       ],
@@ -72,14 +135,18 @@
     {
       "name": "GetCustomerByAge",
       "type": "operation",
+      "stateDataFilter": {
+        "input": "${.age}",
+        "output": "${ {customer} }"
+      },
       "actions": [
         {
           "functionRef": {
             "refName": "get_customer_by_age"
           },
           "actionDataFilter": {
-            "fromStateData": "${age}",
-            "toStateData": "${result}"
+            "fromStateData": "${.}",
+            "toStateData": "${{customer:.}}"
           }
         }
       ],

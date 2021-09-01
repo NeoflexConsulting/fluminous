@@ -1,32 +1,26 @@
 package org.fluminous.routing
 
+import org.fluminous.jq.filter.Filter
+
 sealed trait RoutingStep
 
-sealed trait FirstStep extends RoutingStep
+final case class Switch(
+  inputFilter: Filter,
+  outputFilter: Filter,
+  condition: Filter,
+  ifTrueStep: RoutingStep,
+  ifFalseStep: RoutingStep)
+    extends RoutingStep
 
-sealed trait IntermediateStep extends RoutingStep
+final case class Operation(
+  inputFilter: Filter,
+  outputFilter: Filter,
+  functionName: String,
+  arguments: Map[String, Filter],
+  fromStateDataFilter: Filter,
+  resultsFilter: Filter,
+  toStateDataFilter: Filter,
+  nextStep: RoutingStep)
+    extends RoutingStep
 
-final case class ExecuteFirstCondition(
-  conditionName: String,
-  ifTrueStep: IntermediateStep,
-  ifFalseStep: IntermediateStep)
-    extends FirstStep
-
-final case class ExecuteFirstService(serviceName: String, outputVariableName: String, nextStep: IntermediateStep)
-    extends FirstStep
-
-final case class ExecuteCondition(
-  conditionName: String,
-  inputVariableName: String,
-  ifTrueStep: IntermediateStep,
-  ifFalseStep: IntermediateStep)
-    extends IntermediateStep
-
-final case class ExecuteService(
-  serviceName: String,
-  inputVariableName: String,
-  outputVariableName: String,
-  nextStep: IntermediateStep)
-    extends IntermediateStep
-
-final case class Finish(outputVariableName: String) extends IntermediateStep
+case object Finish extends RoutingStep

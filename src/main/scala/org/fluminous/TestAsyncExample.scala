@@ -2,7 +2,7 @@ package org.fluminous
 
 import io.serverlessworkflow.api.workflow.BaseWorkflow
 import org.fluminous.routing.Routing
-import org.fluminous.services.{ AsyncService, Condition, ServiceCollection }
+import org.fluminous.services.{ AsyncService, ServiceCollection }
 
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -11,24 +11,23 @@ import scala.io.Source
 
 object TestAsyncExample {
   def main(args: Array[String]): Unit = {
-    val upperCaseService   = AsyncService[String, String]("upper", wrapToAsync(_.toUpperCase))
-    val incrementService   = AsyncService[Int, Int]("increment", wrapToAsync(_ + 1))
-    val toStringService    = AsyncService[Int, String]("to_string", wrapToAsync(_.toString))
-    val toIntService       = AsyncService[String, Int]("to_int", wrapToAsync(_.toInt))
-    val getAgeService      = AsyncService[Customer, Int]("get_age", wrapToAsync(_.age))
-    val getNameService     = AsyncService[Customer, String]("get_name", wrapToAsync(_.name))
-    val increaseAgeService = AsyncService[Customer, Customer]("increase_age", wrapToAsync(c => c.copy(age = c.age + 1)))
+    import io.circe.generic.auto._
+    val upperCaseService = AsyncService[String, String]("upper", wrapToAsync(_.toUpperCase), "input")
+    val incrementService = AsyncService[Int, Int]("increment", wrapToAsync(_ + 1), "input")
+    val toStringService  = AsyncService[Int, String]("to_string", wrapToAsync(_.toString), "input")
+    val toIntService     = AsyncService[String, Int]("to_int", wrapToAsync(_.toInt), "input")
+    val getAgeService    = AsyncService[Customer, Int]("get_age", wrapToAsync(_.age), "input")
+    val getNameService   = AsyncService[Customer, String]("get_name", wrapToAsync(_.name), "input")
+    val increaseAgeService =
+      AsyncService[Customer, Customer]("increase_age", wrapToAsync(c => c.copy(age = c.age + 1)), "input")
     val getCustomerByAgeService =
-      AsyncService[Int, Customer]("get_customer_by_age", wrapToAsync(age => Customer("testCustomer", age)))
+      AsyncService[Int, Customer]("get_customer_by_age", wrapToAsync(age => Customer("testCustomer", age)), "input")
     val getCustomerByNameService =
-      AsyncService[String, Customer]("get_customer_by_name", wrapToAsync(name => Customer(name, 25)))
-    val isNumber = Condition[String]("is_number")(_.forall(_.isDigit))
+      AsyncService[String, Customer]("get_customer_by_name", wrapToAsync(name => Customer(name, 25)), "input")
+    val isNumber = AsyncService[String, Boolean]("is_number", wrapToAsync(_.forall(_.isDigit)), "input")
 
     val serviceCollection =
       ServiceCollection[Future]()
-        .addType[Int]
-        .addType[String]
-        .addType[Customer]
         .addService(upperCaseService)
         .addService(incrementService)
         .addService(toStringService)
@@ -38,7 +37,7 @@ object TestAsyncExample {
         .addService(increaseAgeService)
         .addService(getCustomerByAgeService)
         .addService(getCustomerByNameService)
-        .addCondition(isNumber)
+        .addService(isNumber)
 
     val json     = Source.fromResource("routing.json").mkString
     val workflow = BaseWorkflow.fromSource(json)

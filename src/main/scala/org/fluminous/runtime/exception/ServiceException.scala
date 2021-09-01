@@ -1,5 +1,7 @@
 package org.fluminous.runtime.exception
 
+import io.circe.DecodingFailure
+
 sealed abstract class ServiceException private (val serviceName: String, message: String, cause: Throwable)
     extends Exception(message, cause) {
   def this(serviceName: String, message: String) = {
@@ -9,6 +11,12 @@ sealed abstract class ServiceException private (val serviceName: String, message
     this(serviceName, s"Error during service $serviceName invocation", throwable)
   }
 }
+
+case class DeserializationException(override val serviceName: String, deserializationError: DecodingFailure)
+    extends ServiceException(serviceName, deserializationError.message)
+
+case class NotFoundInputParameter(override val serviceName: String, expectedParameter: String)
+    extends ServiceException(serviceName, s"Expected input parameter $expectedParameter not found")
 
 class IncompatibleTypeException(serviceName: String, expectedType: String, actualType: String)
     extends ServiceException(serviceName, s"Incompatible input type. Expected: $expectedType, actual: $actualType")

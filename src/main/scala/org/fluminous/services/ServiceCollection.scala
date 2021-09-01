@@ -1,50 +1,17 @@
 package org.fluminous.services
 
 import org.fluminous.runtime.exception.{ ExecutionRuntimeException, VariableNotFoundException }
-import org.fluminous.runtime.{Router, TypeInfo, ExecutionRuntimeTemplate }
+import org.fluminous.runtime.{ ExecutionRuntimeTemplate, Router, TypeInfo }
 import shapeless._
 import cats.Monad
 import scala.reflect.ClassTag
 
-case class ServiceCollection[F[_]: Monad, L <: HList] private (
-  private val tags: L,
-  private val runtime: Map[String, TypeInfo[F]]) {
-  type HListType = L
-  def addType[A: ClassTag](
-    implicit ev: IsDistinct[ClassTag[A] :: HListType]
-  ): ServiceCollection[F, ClassTag[A] :: HListType] = {
-    val tag      = implicitly[ClassTag[A]]
-    val typeName = tag.runtimeClass.getTypeName
-    new ServiceCollection(tag :: tags, this.runtime.updated(typeName, TypeInfo.forType[F, A]))
+case class ServiceCollection[F[_]: Monad] private (private val runtime: Map[String, Service[F]]) {
+  def addService(service: Service[F]): ServiceCollection[F] = {
+    ServiceCollection(this.runtime.updated(service.name, service))
   }
 
-  def addService[A: ClassTag, B: ClassTag](
-    service: Service[F, A, B]
-  )(implicit evA: Contains[HListType, ClassTag[A]],
-    evB: Contains[HListType, ClassTag[B]]
-  ): ServiceCollection[F, L] = {
-    val inputClass          = implicitly[ClassTag[A]].runtimeClass.getTypeName
-    val typeInfo            = this.runtime.getOrElse(inputClass, TypeInfo.forType[F, A])
-    val updatedServicesList = (service.name, service.toRuntimeService) +: typeInfo.services.toSeq
-    val updatedTypeInfo     = typeInfo.copy(services = updatedServicesList.toMap)
-    ServiceCollection(tags, this.runtime.updated(inputClass, updatedTypeInfo))
-  }
-
-  def addCondition[A: ClassTag](
-    condition: Condition[A]
-  )(implicit evA: Contains[HListType, ClassTag[A]]
-  ): ServiceCollection[F, L] = {
-    val inputClass            = implicitly[ClassTag[A]].runtimeClass.getTypeName
-    val typeInfo              = this.runtime.getOrElse(inputClass, TypeInfo.forType[F, A])
-    val updatedConditionsList = (condition.conditionName, condition.toRuntimeCondition) +: typeInfo.conditions.toSeq
-    val updatedTypeInfo       = typeInfo.copy(conditions = updatedConditionsList.toMap)
-    ServiceCollection(tags, this.runtime.updated(inputClass, updatedTypeInfo))
-  }
-
-  def toRouter[Rq: ClassTag, Rs: ClassTag](
-    implicit evRq: Contains[HListType, ClassTag[Rq]],
-    evRs: Contains[HListType, ClassTag[Rs]]
-  ): Router[F, Rq, Rs] = {
+  def toRouter[Rq: ClassTag, Rs: ClassTag]: Router[F, Rq, Rs] = {
     val inputTypeName  = implicitly[ClassTag[Rq]].runtimeClass.getTypeName
     val outputTypeName = implicitly[ClassTag[Rs]].runtimeClass.getTypeName
     val setter: Rq => Map[String, TypeInfo[F]] = { request =>
@@ -67,7 +34,7 @@ case class ServiceCollection[F[_]: Monad, L <: HList] private (
 }
 
 object ServiceCollection {
-  def apply[F[_]: Monad](): ServiceCollection[F, HNil] = {
-    ServiceCollection(HNil, Map.empty[String, TypeInfo[F]])
+  def apply[F[_]: Monad](): ServiceCollection[F] = {
+    ServiceCollection(Map.empty[String, Service[F]])
   }
 }

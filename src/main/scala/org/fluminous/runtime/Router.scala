@@ -3,10 +3,10 @@ package org.fluminous.runtime
 import cats.Monad
 import cats.data.EitherT
 import org.fluminous.routing.{
-  ExecuteCondition,
+  Switch,
   ExecuteFirstCondition,
   ExecuteFirstService,
-  ExecuteService,
+  Operation,
   Finish,
   FirstStep
 }
@@ -48,13 +48,13 @@ class Router[F[_]: Monad, Rq, Rs](private val initialRuntime: ExecutionRuntimeTe
 
   private def executeAction(rc: RoutingContext[F, Rs]): EitherT[F, ExecutionRuntimeException, RoutingContext[F, Rs]] = {
     rc.nextStep match {
-      case ExecuteCondition(conditionName, inputVariableName, ifTrueStep, ifFalseStep) =>
+      case Switch(conditionName, inputVariableName, ifTrueStep, ifFalseStep) =>
         for {
           conditionIsMet <- EitherT.fromEither[F](rc.er.executeCondition(conditionName, inputVariableName))
         } yield {
           if (conditionIsMet) RoutingContext(ifTrueStep, rc.er) else RoutingContext(ifFalseStep, rc.er)
         }
-      case ExecuteService(serviceName, inputVariableName, outputVariableName, nextStep) =>
+      case Operation(serviceName, inputVariableName, outputVariableName, nextStep) =>
         rc.er.executeService(serviceName, inputVariableName, outputVariableName).map(er => RoutingContext(nextStep, er))
     }
   }

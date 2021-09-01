@@ -1,181 +1,169 @@
 package org.fluminous.routing
 
 import io.serverlessworkflow.api.Workflow
+import io.serverlessworkflow.api.actions.Action
 import io.serverlessworkflow.api.interfaces.State
 import io.serverlessworkflow.api.states.{ OperationState, SwitchState }
-import org.fluminous.runtime.exception.WorkFlowBuildException
+import org.fluminous.jq.Parser
+import org.fluminous.jq.filter.Filter
+import org.fluminous.jq.tokens.Root
+import org.fluminous.runtime.exception.{
+  ActionNotFound,
+  ConditionNotFound,
+  ExpressionNotFound,
+  InitialStateNotFound,
+  InvalidStateReference,
+  JqParserError,
+  UnsupportedStateType,
+  WorkFlowBuildException
+}
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
+import cats.syntax.traverse._
 
-object Routing {
-  def fromWorkflow(workflow: Workflow): Either[WorkFlowBuildException, FirstStep] = {
+object Routing extends Parser {
+  def fromWorkflow(workflow: Workflow): Either[WorkFlowBuildException, RoutingStep] = {
     val states = workflow.getStates.asScala.toList
     for {
       initialState       <- findInitialState(workflow)
       intermediateStates = states.filter(_.getName != initialState.getName)
-      readySteps         <- buildIntermediateSteps(intermediateStates, Right(Map.empty))
-      initialState       <- buildInitialStep(readySteps)(initialState)
-    } yield initialState
+      readySteps         <- buildSteps(intermediateStates, Right(Map.empty))
+      initialState       <- buildStep(readySteps)(initialState)
+    } yield initialState._2
   }
 
   @tailrec
-  private def buildIntermediateSteps(
+  private def buildSteps(
     states: List[State],
-    readySteps: Either[WorkFlowBuildException, Map[String, IntermediateStep]]
-  ): Either[WorkFlowBuildException, Map[String, IntermediateStep]] = {
+    readySteps: Either[WorkFlowBuildException, Map[String, RoutingStep]]
+  ): Either[WorkFlowBuildException, Map[String, RoutingStep]] = {
     import cats.instances.either._, cats.syntax.traverse._
     readySteps match {
       case e @ Left(_) => e
       case Right(steps) =>
         val (readyForBuilding, notReadyForBuilding) = states.partition(couldBeBuilt(steps))
         val updatedReadySteps =
-          readyForBuilding.map(buildIntermediateStep(steps)).sequence.map(b => b.toMap ++ steps)
+          readyForBuilding.map(buildStep(steps)).sequence.map(b => b.toMap ++ steps)
         if (readyForBuilding.isEmpty) {
           Right(steps)
         } else {
-          buildIntermediateSteps(notReadyForBuilding, updatedReadySteps)
+          buildSteps(notReadyForBuilding, updatedReadySteps)
         }
     }
   }
 
-  private def couldBeBuilt(readySteps: Map[String, IntermediateStep])(state: State): Boolean = {
+  private def couldBeBuilt(readySteps: Map[String, RoutingStep])(state: State): Boolean = {
     state match {
       case operationState: OperationState =>
         isFinal(operationState) ||
           asOption(operationState.getTransition)(_.getNextState).exists(readySteps.contains)
       case switchState: SwitchState =>
         readySteps.contains(switchState.getDefault.getTransition.getNextState) &&
-        switchState.getDataConditions.asScala.headOption.map(_.getTransition.getNextState).exists(readySteps.contains)
+          switchState.getDataConditions.asScala.headOption.map(_.getTransition.getNextState).exists(readySteps.contains)
       case _ => false
     }
   }
 
-  private def buildIntermediateStep(
-    readySteps: Map[String, IntermediateStep]
+  private def buildStep(
+    readySteps: Map[String, RoutingStep]
   )(
     state: State
-  ): Either[WorkFlowBuildException, (String, IntermediateStep)] = {
+  ): Either[WorkFlowBuildException, (String, RoutingStep)] = {
     state match {
       case operationState: OperationState =>
-        buildIntermediateStep(operationState, readySteps)
+        buildStep(operationState, readySteps)
       case switchState: SwitchState =>
-        buildIntermediateStep(switchState, readySteps)
+        buildStep(switchState, readySteps)
       case _ =>
-        Left(new WorkFlowBuildException(s"Unsupported state type: ${state.getType.value()}"))
+        UnsupportedStateType(state.getType.value())
     }
   }
 
-  private def buildIntermediateStep(
+  private def buildStep(
     state: SwitchState,
-    readySteps: Map[String, IntermediateStep]
-  ): Either[WorkFlowBuildException, (String, IntermediateStep)] = {
+    readySteps: Map[String, RoutingStep]
+  ): Either[WorkFlowBuildException, (String, RoutingStep)] = {
     for {
-      condition <- state.getDataConditions.asScala.headOption
-                    .toRight(new WorkFlowBuildException(s"Condition in state ${state.getName} not found "))
-      conditionName     <- extractVariableName(condition.getCondition)
-      inputVariableName <- extractVariableName(state.getStateDataFilter.getInput)
+
+      condition           <- state.getDataConditions.asScala.headOption.toRight(ConditionNotFound(state.getName))
+      conditionExpression <- Option(condition.getCondition).toRight(ConditionNotFound(state.getName))
+      conditionFilter     <- extractFilter(conditionExpression)
+      inputFilter         <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(Root))
+      outputFilter        <- asOption(state.getStateDataFilter)(_.getOutput).map(extractFilter).getOrElse(Right(Root))
       ifTrueStep <- readySteps
                      .get(condition.getTransition.getNextState)
-                     .toRight(new WorkFlowBuildException(s"state ${state.getName} references to invalid next state"))
+                     .toRight(InvalidStateReference(state.getName, condition.getTransition.getNextState))
       ifFalseStep <- readySteps
                       .get(state.getDefault.getTransition.getNextState)
-                      .toRight(new WorkFlowBuildException(s"state ${state.getName} references to invalid next state"))
+                      .toRight(InvalidStateReference(state.getName, state.getDefault.getTransition.getNextState))
     } yield {
-      state.getName -> ExecuteCondition(conditionName, inputVariableName, ifTrueStep, ifFalseStep)
+      state.getName -> Switch(inputFilter, outputFilter, conditionFilter, ifTrueStep, ifFalseStep)
     }
   }
 
-  private def buildIntermediateStep(
+  private def buildStep(
     state: OperationState,
-    readySteps: Map[String, IntermediateStep]
-  ): Either[WorkFlowBuildException, (String, IntermediateStep)] = {
+    readySteps: Map[String, RoutingStep]
+  ): Either[WorkFlowBuildException, (String, RoutingStep)] = {
     for {
-      action <- state.getActions.asScala.headOption
-                 .toRight(new WorkFlowBuildException(s"Action in state ${state.getName} not found "))
-      serviceName        = action.getFunctionRef.getRefName
-      inputVariableName  <- extractVariableName(action.getActionDataFilter.getFromStateData)
-      outputVariableName <- extractVariableName(action.getActionDataFilter.getToStateData)
-      nextState          <- getNextState(state, outputVariableName, readySteps)
+      action       <- state.getActions.asScala.headOption.toRight(ActionNotFound(state.getName))
+      functionName = action.getFunctionRef.getRefName
+      arguments    <- readArguments(action)
+      inputFilter  <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(Root))
+      outputFilter <- asOption(state.getStateDataFilter)(_.getOutput).map(extractFilter).getOrElse(Right(Root))
+      fromStateDataFilter <- asOption(action.getActionDataFilter)(_.getFromStateData)
+                              .map(extractFilter)
+                              .getOrElse(Right(Root))
+      resultsFilter <- asOption(action.getActionDataFilter)(_.getResults).map(extractFilter).getOrElse(Right(Root))
+      toStateDataFilter <- asOption(action.getActionDataFilter)(_.getToStateData)
+                            .map(extractFilter)
+                            .getOrElse(Right(Root))
+      nextState <- getNextState(state, readySteps)
     } yield {
-      state.getName -> ExecuteService(serviceName, inputVariableName, outputVariableName, nextState)
+      state.getName -> Operation(
+        inputFilter,
+        outputFilter,
+        functionName,
+        arguments,
+        fromStateDataFilter,
+        resultsFilter,
+        toStateDataFilter,
+        nextState
+      )
     }
   }
 
-  private def buildInitialStep(
-    readySteps: Map[String, IntermediateStep]
-  )(
-    state: State
-  ): Either[WorkFlowBuildException, FirstStep] = {
-    state match {
-      case operationState: OperationState =>
-        buildInitialStep(operationState, readySteps)
-      case switchState: SwitchState =>
-        buildInitialStep(switchState, readySteps)
-      case _ =>
-        Left(new WorkFlowBuildException(s"Unsupported state type: ${state.getType.value()}"))
-    }
-  }
-
-  private def buildInitialStep(
-    state: SwitchState,
-    readySteps: Map[String, IntermediateStep]
-  ): Either[WorkFlowBuildException, FirstStep] = {
-    for {
-      condition <- state.getDataConditions.asScala.headOption
-                    .toRight(new WorkFlowBuildException(s"Condition in state ${state.getName} not found "))
-      conditionName <- extractVariableName(condition.getCondition)
-      ifTrueStep <- readySteps
-                     .get(condition.getTransition.getNextState)
-                     .toRight(new WorkFlowBuildException(s"state ${state.getName} references to invalid next state"))
-      ifFalseStep <- readySteps
-                      .get(state.getDefault.getTransition.getNextState)
-                      .toRight(new WorkFlowBuildException(s"state ${state.getName} references to invalid next state"))
-    } yield {
-      ExecuteFirstCondition(conditionName, ifTrueStep, ifFalseStep)
-    }
-  }
-
-  private def buildInitialStep(
-    state: OperationState,
-    readySteps: Map[String, IntermediateStep]
-  ): Either[WorkFlowBuildException, FirstStep] = {
-    for {
-      action <- state.getActions.asScala.headOption
-                 .toRight(new WorkFlowBuildException(s"Action in state ${state.getName} not found "))
-      serviceName        = action.getFunctionRef.getRefName
-      outputVariableName <- extractVariableName(action.getActionDataFilter.getToStateData)
-      nextState          <- getNextState(state, outputVariableName, readySteps)
-    } yield {
-      ExecuteFirstService(serviceName, outputVariableName, nextState)
-    }
+  private def readArguments(action: Action): Either[WorkFlowBuildException, Map[String, Filter]] = {
+    val entries       = action.getFunctionRef.getArguments.fields().asScala.toList
+    val arguments     = entries.map(entry => (entry.getKey, entry.getValue.asText()))
+    val parsedFilters = arguments.map { case (name, value) => parse(value).map(f => (name, f)) }.sequence
+    parsedFilters.map(_.toMap).left.map(JqParserError)
   }
 
   private def getNextState(
     state: OperationState,
-    outputVariableName: String,
-    readySteps: Map[String, IntermediateStep]
-  ): Either[WorkFlowBuildException, IntermediateStep] = {
+    readySteps: Map[String, RoutingStep]
+  ): Either[WorkFlowBuildException, RoutingStep] = {
     if (isFinal(state))
-      Right(Finish(outputVariableName))
+      Right(Finish)
     else
       readySteps
         .get(state.getTransition.getNextState)
-        .toRight(new WorkFlowBuildException(s"state ${state.getName} references to invalid next state"))
+        .toRight(InvalidStateReference(state.getName, state.getTransition.getNextState))
   }
 
   private def findInitialState(workFlow: Workflow): Either[WorkFlowBuildException, State] = {
     workFlow.getStates.asScala
       .find(_.getName == workFlow.getStart.getStateName)
-      .toRight(new WorkFlowBuildException(s"Initial state not found"))
+      .toRight(InitialStateNotFound())
   }
 
-  private def extractVariableName(expression: String): Either[WorkFlowBuildException, String] = {
-    val matcher = variablePattern.pattern.matcher(expression)
-    if (matcher.matches()) {
-      Right(matcher.group(1))
+  private def extractFilter(expression: String): Either[WorkFlowBuildException, Filter] = {
+    if (!expression.startsWith("${") || !expression.endsWith("}")) {
+      Left(ExpressionNotFound(expression))
     } else {
-      Left(new WorkFlowBuildException(s"Expression $expression does not conform to variable specification"))
+      parse(expression.substring(2).dropRight(1)).left.map(JqParserError)
     }
   }
 
@@ -186,6 +174,4 @@ object Routing {
   private def asOption[T, U](t: T)(f: T => U): Option[U] = {
     if (t != null) Some(f(t)) else None
   }
-
-  private val variablePattern = raw"""\$$\{([a-zA-Z]\w*)\}""".r
 }
