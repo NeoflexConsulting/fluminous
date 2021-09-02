@@ -136,10 +136,10 @@ object Routing extends Parser {
   }
 
   private def readArguments(action: Action): Either[WorkFlowBuildException, Map[String, Filter]] = {
-    val entries       = action.getFunctionRef.getArguments.fields().asScala.toList
-    val arguments     = entries.map(entry => (entry.getKey, entry.getValue.asText()))
-    val parsedFilters = arguments.map { case (name, value) => parse(value).map(f => (name, f)) }.sequence
-    parsedFilters.map(_.toMap).left.map(JqParserError)
+    val entries   = action.getFunctionRef.getArguments.fields().asScala.toList
+    val arguments = entries.map(entry => (entry.getKey, entry.getValue.asText()))
+    val parsedFilters = arguments.map { case (name, value) => extractFilter(value).map(f => (name, f)) }.sequence
+    parsedFilters.map(_.toMap)
   }
 
   private def getNextState(
@@ -173,6 +173,6 @@ object Routing extends Parser {
   }
 
   private def asOption[T, U](t: T)(f: T => U): Option[U] = {
-    if (t != null) Some(f(t)) else None
+    if (t != null) Option(f(t)) else None
   }
 }

@@ -1,6 +1,5 @@
 package org.fluminous.jq.filter.pattern
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import io.circe.Json
 import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.{ JsonArrayTemplateConstructor, JsonObjectTemplate, Selector }

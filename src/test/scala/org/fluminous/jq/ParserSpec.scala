@@ -54,7 +54,9 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
           JsonObjectTemplate(Map("user" -> Right(Selector(Seq("user"))), "title" -> Right(Selector(Seq("title")))))
         )
       )
-
+      parse(""" {customer:.}""") should be(
+        Right(JsonObjectTemplate(Map("customer" -> Right(Root))))
+      )
     }
   }
 }

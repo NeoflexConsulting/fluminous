@@ -5,33 +5,6 @@
   "name": "Sample Workflow",
   "description": "Sample Workflow",
   "start": "InitialState",
-  "functions": [
-    {
-      "name": "upperInput",
-      "operation": "upperInput",
-      "type": "custom"
-    },
-    {
-      "name": "upper",
-      "operation": "upper",
-      "type": "custom"
-    },
-    {
-      "name": "to_int",
-      "operation": "to_int",
-      "type": "custom"
-    },
-    {
-      "name": "get_customer_by_name",
-      "operation": "get_customer_by_name",
-      "type": "custom"
-    },
-    {
-      "name": "get_customer_by_age",
-      "operation": "get_customer_by_age",
-      "type": "custom"
-    }
-  ],
   "states": [
     {
       "name": "InitialState",
@@ -142,7 +115,10 @@
       "actions": [
         {
           "functionRef": {
-            "refName": "get_customer_by_age"
+            "refName": "get_customer_by_age",
+            "arguments": {
+              "input": "${.}"
+            }
           },
           "actionDataFilter": {
             "fromStateData": "${.}",
