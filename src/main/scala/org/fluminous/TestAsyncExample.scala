@@ -45,14 +45,14 @@ object TestAsyncExample {
 
     //Creating router
     routing.foreach { r =>
-      val router = serviceCollection.toRouter[String, Customer]
+      val router = serviceCollection.toRouter[String, Customer](r)
 
-      val resultFuture1 = router.routeRequest("Иван", r)
+      val resultFuture1 = router.routeRequest("Иван")
       println("Awaiting result1.....")
       val result1 = Await.result(resultFuture1, 60 seconds)
       println(s"Result1 arrived: $result1")
 
-      val resultFuture2 = router.routeRequest("12", r)
+      val resultFuture2 = router.routeRequest("12")
       println("Awaiting result2.....")
       val result2 = Await.result(resultFuture2, 60 seconds)
       println(s"Result2 arrived: $result2")

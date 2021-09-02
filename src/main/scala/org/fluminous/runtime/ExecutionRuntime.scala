@@ -2,110 +2,102 @@ package org.fluminous.runtime
 
 import cats.Monad
 import cats.data.EitherT
+import io.circe.{ Json, JsonObject }
+import io.circe.Json.{ fromJsonObject, fromValues, Null }
+import org.fluminous.jq.filter.Filter
+import org.fluminous.routing.{ Operation, RoutingStep, Switch }
 import org.fluminous.runtime.exception.{
-  ConditionNotFoundException,
+  ActionFilterEvaluatedToNull,
+  ConditionEvaluatedToNonBoolean,
   ExecutionRuntimeException,
-  InputValueNotFoundException,
-  ServiceException,
+  InputStateFilterEvaluatedToNull,
+  OutputStateFilterEvaluatedToNull,
   ServiceExecutionException,
-  ServiceNotFoundException,
-  VariableNotFoundException
+  ServiceNotFoundException
 }
-import org.fluminous.services.RuntimeService
+import org.fluminous.services.Service
 
-class ExecutionRuntime[F[_]: Monad, Rs](
-  private val runtime: Map[String, TypeInfo[F]],
-  private val outputGetter: (String, Map[String, TypeInfo[F]]) => Either[ExecutionRuntimeException, Rs]) {
-  def executeFirstService(
-    serviceName: String,
-    outputVariableName: String
-  ): EitherT[F, ExecutionRuntimeException, ExecutionRuntime[F, Rs]] = {
+case class ExecutionRuntime[F[_]: Monad](
+  services: Map[String, Service[F]],
+  contextJson: Json,
+  currentStep: RoutingStep) {
+
+  def executeOperation(operation: Operation): EitherT[F, ExecutionRuntimeException, ExecutionRuntime[F]] = {
+    import EitherT._
+    val serviceName = operation.functionName
     for {
-      serviceWithVariable      <- EitherT.fromEither[F](getServiceWithVariable(serviceName))
-      (service, inputVariable) = serviceWithVariable
-      result                   <- service.invoke(inputVariable, outputVariableName).leftMap(wrapServiceException)
-    } yield { new ExecutionRuntime[F, Rs](updateVariable(runtime, result), outputGetter) }
+      service       <- fromEither[F](services.get(serviceName).toRight(ServiceNotFoundException(serviceName)))
+      argumentsJson <- fromEither[F](getArguments(operation, contextJson))
+      result        <- service.invoke(argumentsJson).leftMap(ServiceExecutionException)
+      updatedJson   <- fromEither[F](updateContextJson(operation, contextJson, result))
+    } yield this.copy(contextJson = updatedJson, currentStep = operation.nextStep)
   }
 
-  def executeFirstCondition(conditionName: String): Either[ExecutionRuntimeException, Boolean] = {
+  def executeSwitch(switch: Switch): Either[ExecutionRuntimeException, ExecutionRuntime[F]] = {
     for {
-      typeInfo <- runtime.toSeq
-                   .find(_._2.conditions.contains(conditionName))
-                   .toRight(new ConditionNotFoundException(conditionName))
-      inputValue    <- typeInfo._2.inputValue.toRight(new InputValueNotFoundException(typeInfo._2.typeName))
-      inputVariable = Variable("input", typeInfo._1, inputValue)
-      condition     <- typeInfo._2.conditions.get(conditionName).toRight(new ConditionNotFoundException(conditionName))
-      result        <- condition.check(inputVariable).left.map(new ServiceExecutionException(_))
+      stateJson <- switch.inputFilter.transform(contextJson).toRight(InputStateFilterEvaluatedToNull(switch.stateName))
+      result    <- evaluateCondition(switch.stateName, switch.condition, stateJson)
+      updatedJson <- switch.outputFilter
+                      .transform(stateJson)
+                      .toRight(OutputStateFilterEvaluatedToNull(switch.stateName))
     } yield {
-      result
+      if (result) {
+        this.copy(contextJson = updatedJson, currentStep = switch.ifTrueStep)
+      } else {
+        this.copy(contextJson = updatedJson, currentStep = switch.ifFalseStep)
+      }
     }
   }
 
-  def executeService(
-    serviceName: String,
-    inputVariableName: String,
-    outputVariableName: String
-  ): EitherT[F, ExecutionRuntimeException, ExecutionRuntime[F, Rs]] = {
-    for {
-      serviceWithVariable      <- EitherT.fromEither[F](getServiceWithVariable(serviceName, inputVariableName))
-      (service, inputVariable) = serviceWithVariable
-      result                   <- service.invoke(inputVariable, outputVariableName).leftMap(wrapServiceException)
-    } yield { new ExecutionRuntime[F, Rs](updateVariable(runtime, result), outputGetter) }
+  private def evaluateCondition(
+    stateName: String,
+    condition: Filter,
+    input: Json
+  ): Either[ExecutionRuntimeException, Boolean] = {
+    val result = condition.transform(input)
+    result.flatMap(_.asBoolean).toRight(ConditionEvaluatedToNonBoolean(stateName, result.getOrElse(Null)))
   }
 
-  def executeCondition(conditionName: String, inputVariableName: String): Either[ExecutionRuntimeException, Boolean] = {
+  private def getArguments(
+    operation: Operation,
+    contextJson: Json
+  ): Either[ExecutionRuntimeException, Map[String, Json]] = {
+    val stateName = operation.stateName
     for {
-      typeInfo <- runtime.toSeq
-                   .find(_._2.conditions.contains(conditionName))
-                   .toRight(new ConditionNotFoundException(conditionName))
-      inputVariable <- typeInfo._2.variables
-                        .get(inputVariableName)
-                        .toRight(new VariableNotFoundException(inputVariableName, typeInfo._1))
-      condition <- typeInfo._2.conditions.get(conditionName).toRight(new ConditionNotFoundException(conditionName))
-      result    <- condition.check(inputVariable).left.map(new ServiceExecutionException(_))
-    } yield {
-      result
-    }
-  }
-  def getOutput(variableName: String): Either[ExecutionRuntimeException, Rs] = this.outputGetter(variableName, runtime)
-
-  private def getServiceWithVariable(
-    serviceName: String
-  ): Either[ExecutionRuntimeException, (RuntimeService[F], Variable)] = {
-    for {
-      typeInfo <- runtime.toSeq
-                   .find(_._2.services.contains(serviceName))
-                   .toRight(new ServiceNotFoundException(serviceName))
-      inputValue    <- typeInfo._2.inputValue.toRight(new InputValueNotFoundException(typeInfo._2.typeName))
-      inputVariable = Variable("input", typeInfo._1, inputValue)
-      service       <- typeInfo._2.services.get(serviceName).toRight(new ServiceNotFoundException(serviceName))
-    } yield (service, inputVariable)
+      stateJson     <- operation.inputFilter.transform(contextJson).toRight(InputStateFilterEvaluatedToNull(stateName))
+      actionJson    <- operation.fromStateDataFilter.transform(stateJson).toRight(ActionFilterEvaluatedToNull(stateName))
+      argumentsJson = operation.arguments.flatMap { case (k, v) => v.transform(actionJson).map(j => (k, j)) }
+    } yield argumentsJson
   }
 
-  private def getServiceWithVariable(
-    serviceName: String,
-    inputVariableName: String
-  ): Either[ExecutionRuntimeException, (RuntimeService[F], Variable)] = {
-    for {
-      typeInfo <- runtime.toSeq
-                   .find(_._2.services.contains(serviceName))
-                   .toRight(new ServiceNotFoundException(serviceName))
-      inputVariable <- typeInfo._2.variables
-                        .get(inputVariableName)
-                        .toRight(new VariableNotFoundException(inputVariableName, typeInfo._1))
-      service <- typeInfo._2.services.get(serviceName).toRight(new ServiceNotFoundException(serviceName))
-    } yield (service, inputVariable)
+  private def updateContextJson(
+    operation: Operation,
+    contextJson: Json,
+    result: Json
+  ): Either[ExecutionRuntimeException, Json] = {
+    val mergingJson = operation.resultsFilter.transform(result).flatMap(j => operation.toStateDataFilter.transform(j))
+    val mergedJson  = mergingJson.map(j => merge(j, contextJson)).getOrElse(contextJson)
+    operation.outputFilter.transform(mergedJson).toRight(OutputStateFilterEvaluatedToNull(operation.stateName))
   }
 
-  private def updateVariable(rt: Map[String, TypeInfo[F]], variable: Variable): Map[String, TypeInfo[F]] = {
-    val typeInfo         = rt.get(variable.typeName)
-    val variables        = typeInfo.map(_.variables).getOrElse(Map.empty)
-    val updatedVariable  = variables.get(variable.variableName).map(_.copy(value = variable.value)).getOrElse(variable)
-    val updatedVariables = variables.updated(variable.variableName, updatedVariable)
-    val updatedTypeInfo  = typeInfo.map(_.copy(variables = updatedVariables))
-    updatedTypeInfo.map(t => rt.updated(variable.typeName, t)).getOrElse(rt)
+  private def merge(left: Json, right: Json): Json =
+    left.arrayOrObject(right, mergeArrays(_, right), mergeObjects(_, right))
+
+  private def mergeObjects(left: JsonObject, right: Json): Json = right.asObject match {
+    case Some(rhs) =>
+      fromJsonObject(
+        left.toIterable.foldLeft(rhs) {
+          case (acc, (key, value)) =>
+            rhs(key).fold(acc.add(key, value)) { r =>
+              acc.add(key, merge(value, r))
+            }
+        }
+      )
+    case _ => right
   }
-  private def wrapServiceException(ex: ServiceException): ExecutionRuntimeException = {
-    new ServiceExecutionException(ex)
+
+  private def mergeArrays(left: Vector[Json], right: Json): Json = right.asArray match {
+    case Some(rhs) => fromValues(rhs ++ left)
+    case _         => right
   }
 }

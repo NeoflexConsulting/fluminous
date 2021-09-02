@@ -98,7 +98,7 @@ object Routing extends Parser {
                       .get(state.getDefault.getTransition.getNextState)
                       .toRight(InvalidStateReference(state.getName, state.getDefault.getTransition.getNextState))
     } yield {
-      state.getName -> Switch(inputFilter, outputFilter, conditionFilter, ifTrueStep, ifFalseStep)
+      state.getName -> Switch(state.getName, inputFilter, outputFilter, conditionFilter, ifTrueStep, ifFalseStep)
     }
   }
 
@@ -122,6 +122,7 @@ object Routing extends Parser {
       nextState <- getNextState(state, readySteps)
     } yield {
       state.getName -> Operation(
+        state.getName,
         inputFilter,
         outputFilter,
         functionName,

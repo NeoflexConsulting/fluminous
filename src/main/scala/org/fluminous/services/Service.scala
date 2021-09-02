@@ -2,10 +2,10 @@ package org.fluminous.services
 
 import cats.{ Id, Monad }
 import cats.data.EitherT
-
 import io.circe.{ Decoder, Encoder, Json }
 import cats.syntax.functor._
 import org.fluminous.runtime.exception.{ DeserializationException, NotFoundInputParameter, ServiceException }
+
 import scala.concurrent.Future
 
 sealed abstract class Service[F[_]: Monad](val name: String) {

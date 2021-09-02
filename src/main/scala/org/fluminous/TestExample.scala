@@ -46,10 +46,10 @@ object TestExample {
 
     //Creating router
     routing.foreach { r =>
-      val router  = serviceCollection.toRouter[String, Customer]
-      val result1 = router.routeRequest("Иван", r)
+      val router  = serviceCollection.toRouter[String, Customer](r)
+      val result1 = router.routeRequest("Иван")
       println(result1)
-      val result2 = router.routeRequest("12", r)
+      val result2 = router.routeRequest("12")
       println(result2)
     }
 

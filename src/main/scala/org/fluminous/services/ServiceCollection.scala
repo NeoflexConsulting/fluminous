@@ -1,35 +1,61 @@
 package org.fluminous.services
 
-import org.fluminous.runtime.exception.{ ExecutionRuntimeException, VariableNotFoundException }
-import org.fluminous.runtime.{ ExecutionRuntimeTemplate, Router, TypeInfo }
-import shapeless._
+import org.fluminous.runtime.exception.{ ExecutionRuntimeException, ResponseDeserializationException }
+import org.fluminous.runtime.{ ExecutionRuntime, Router }
 import cats.Monad
-import scala.reflect.ClassTag
+import cats.data.EitherT
+import io.circe.{ Decoder, Encoder, Json }
+import org.fluminous.routing.{ ExecutionStep, Finish, RoutingStep }
 
-case class ServiceCollection[F[_]: Monad] private (private val runtime: Map[String, Service[F]]) {
+case class ServiceCollection[F[_]: Monad] private (private val services: Map[String, Service[F]]) {
+
   def addService(service: Service[F]): ServiceCollection[F] = {
-    ServiceCollection(this.runtime.updated(service.name, service))
+    ServiceCollection(this.services.updated(service.name, service))
   }
 
-  def toRouter[Rq: ClassTag, Rs: ClassTag]: Router[F, Rq, Rs] = {
-    val inputTypeName  = implicitly[ClassTag[Rq]].runtimeClass.getTypeName
-    val outputTypeName = implicitly[ClassTag[Rs]].runtimeClass.getTypeName
-    val setter: Rq => Map[String, TypeInfo[F]] = { request =>
-      val updatedTypeInfo =
-        this.runtime.getOrElse(inputTypeName, TypeInfo.forType[F, Rq]).copy(inputValue = Some(request))
-      this.runtime.updated(inputTypeName, updatedTypeInfo)
-    }
-    val getter: (String, Map[String, TypeInfo[F]]) => Either[ExecutionRuntimeException, Rs] = { (variableName, rt) =>
-      {
-        rt.getOrElse(outputTypeName, TypeInfo.forType[F, Rs])
-          .variables
-          .get(variableName)
-          .map(_.value.asInstanceOf[Rs])
-          .toRight(new VariableNotFoundException(variableName, outputTypeName))
+  def toRouter[Rq: Encoder, Rs: Decoder](routingStep: RoutingStep): Router[F, Rq, Rs] = {
+    new TypedRouter[F, Rq, Rs](new UntypedRouter[F](services, routingStep))
+  }
 
+  def toUntypedRouter(routingStep: RoutingStep): Router[F, Json, Json] = { new UntypedRouter[F](services, routingStep) }
+
+  private class TypedRouter[F[_]: Monad, Rq: Encoder, Rs: Decoder](private val untypedRouter: UntypedRouter[F])
+      extends Router[F, Rq, Rs] {
+
+    override def routeRequest(input: Rq): F[Either[ExecutionRuntimeException, Rs]] = {
+      (for {
+        json   <- EitherT(untyped.routeRequest(Encoder[Rq].apply(input)))
+        result <- decodeJson(json)
+      } yield result).value
+    }
+
+    override def untyped: UntypedRouter[F] = untypedRouter
+
+    private def decodeJson(json: Json): EitherT[F, ExecutionRuntimeException, Rs] = {
+      EitherT.fromEither[F](Decoder[Rs].decodeJson(json).left.map(ResponseDeserializationException))
+    }
+  }
+
+  private class UntypedRouter[F[_]: Monad](private val services: Map[String, Service[F]], routingStep: RoutingStep)
+      extends Router[F, Json, Json] {
+
+    override def routeRequest(input: Json): F[Either[ExecutionRuntimeException, Json]] = {
+      val rc = executeNextStep(EitherT.pure(ExecutionRuntime[F](services, input, routingStep)))
+      rc.value
+    }
+
+    override def untyped: UntypedRouter[F] = this
+
+    private def executeNextStep(
+      runtime: EitherT[F, ExecutionRuntimeException, ExecutionRuntime[F]]
+    ): EitherT[F, ExecutionRuntimeException, Json] = {
+      runtime.flatMap { r =>
+        r.currentStep match {
+          case Finish              => EitherT.pure(r.contextJson)
+          case step: ExecutionStep => executeNextStep(step.executeInRuntime(r))
+        }
       }
     }
-    new Router[F, Rq, Rs](new ExecutionRuntimeTemplate[F, Rq, Rs](setter, getter))
   }
 }
 

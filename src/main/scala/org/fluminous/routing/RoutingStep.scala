@@ -1,18 +1,36 @@
 package org.fluminous.routing
 
+import cats.Monad
+import cats.data.EitherT
 import org.fluminous.jq.filter.Filter
+import org.fluminous.runtime.ExecutionRuntime
+import org.fluminous.runtime.exception.ExecutionRuntimeException
 
 sealed trait RoutingStep
 
+trait ExecutionStep extends RoutingStep {
+  def executeInRuntime[F[_]: Monad](
+    runtime: ExecutionRuntime[F]
+  ): EitherT[F, ExecutionRuntimeException, ExecutionRuntime[F]]
+}
+
 final case class Switch(
+  stateName: String,
   inputFilter: Filter,
   outputFilter: Filter,
   condition: Filter,
   ifTrueStep: RoutingStep,
   ifFalseStep: RoutingStep)
-    extends RoutingStep
+    extends ExecutionStep {
+  override def executeInRuntime[F[_]: Monad](
+    runtime: ExecutionRuntime[F]
+  ): EitherT[F, ExecutionRuntimeException, ExecutionRuntime[F]] = {
+    EitherT.fromEither[F](runtime.executeSwitch(this))
+  }
+}
 
 final case class Operation(
+  stateName: String,
   inputFilter: Filter,
   outputFilter: Filter,
   functionName: String,
@@ -21,6 +39,12 @@ final case class Operation(
   resultsFilter: Filter,
   toStateDataFilter: Filter,
   nextStep: RoutingStep)
-    extends RoutingStep
+    extends ExecutionStep {
+  override def executeInRuntime[F[_]: Monad](
+    runtime: ExecutionRuntime[F]
+  ): EitherT[F, ExecutionRuntimeException, ExecutionRuntime[F]] = {
+    runtime.executeOperation(this)
+  }
+}
 
 case object Finish extends RoutingStep

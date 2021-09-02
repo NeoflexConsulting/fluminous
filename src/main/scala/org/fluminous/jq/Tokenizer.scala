@@ -1,7 +1,7 @@
 package org.fluminous.jq
 
 import org.fluminous.jq
-import org.fluminous.jq.input.{EOF, InputProvider}
+import org.fluminous.jq.input.{ EOF, InputProvider }
 import org.fluminous.jq.tokens.Token
 
 import scala.annotation.tailrec

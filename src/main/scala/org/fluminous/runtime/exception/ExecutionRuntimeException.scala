@@ -1,21 +1,32 @@
 package org.fluminous.runtime.exception
 
+import io.circe.{ DecodingFailure, Json }
+
 sealed class ExecutionRuntimeException(val message: String, val cause: Option[Exception] = Option.empty)
     extends Exception(message, cause.orNull)
 
-final class NoServicesFoundException extends ExecutionRuntimeException("No services were found")
+case class ResponseDeserializationException(deserializationError: DecodingFailure)
+    extends ExecutionRuntimeException("Final output JSON is not suitable.", Some(deserializationError))
 
-final class VariableNotFoundException(variableName: String, expectedType: String)
-    extends ExecutionRuntimeException(s"Variable with name $variableName of type $expectedType not found")
+final case class NoServicesFoundException() extends ExecutionRuntimeException("No services were found")
 
-final class ConditionNotFoundException(conditionName: String)
-    extends ExecutionRuntimeException(s"Condition with name $conditionName not found")
+final case class InputStateFilterEvaluatedToNull(stateName: String)
+    extends ExecutionRuntimeException(s"Input state filter for state ${stateName} evaluated to null")
 
-final class InputValueNotFoundException(expectedType: String)
-    extends ExecutionRuntimeException(s"Input value of type $expectedType not found")
+final case class OutputStateFilterEvaluatedToNull(stateName: String)
+    extends ExecutionRuntimeException(s"Output state filter for state ${stateName} evaluated to null")
 
-final class ServiceNotFoundException(serviceName: String)
+final case class ActionFilterEvaluatedToNull(stateName: String)
+    extends ExecutionRuntimeException(s"FromState action filter for state ${stateName} evaluated to null")
+
+final case class ConditionEvaluatedToNonBoolean(stateName: String, value: Json)
+    extends ExecutionRuntimeException(s"Condition in state ${stateName} evaluated to non-boolean value: $value")
+
+final case class ServiceNotFoundException(serviceName: String)
     extends ExecutionRuntimeException(s"Service with name $serviceName not found")
 
-final class ServiceExecutionException(exception: ServiceException)
-    extends ExecutionRuntimeException(s"Error occurred during invocation of service ${exception.serviceName}", Some(exception))
+final case class ServiceExecutionException(exception: ServiceException)
+    extends ExecutionRuntimeException(
+      s"Error occurred during invocation of service ${exception.serviceName}",
+      Some(exception)
+    )
