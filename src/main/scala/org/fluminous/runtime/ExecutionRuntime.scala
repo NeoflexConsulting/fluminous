@@ -80,24 +80,24 @@ case class ExecutionRuntime[F[_]: Monad](
     operation.outputFilter.transform(mergedJson).toRight(OutputStateFilterEvaluatedToNull(operation.stateName))
   }
 
-  private def merge(left: Json, right: Json): Json =
-    left.arrayOrObject(right, mergeArrays(_, right), mergeObjects(_, right))
+  private def merge(from: Json, to: Json): Json =
+    from.arrayOrObject(to, mergeArrays(_, to), mergeObjects(_, to))
 
-  private def mergeObjects(left: JsonObject, right: Json): Json = right.asObject match {
-    case Some(rhs) =>
+  private def mergeObjects(fromObject: JsonObject, toJson: Json): Json = toJson.asObject match {
+    case Some(toObject) =>
       fromJsonObject(
-        left.toIterable.foldLeft(rhs) {
-          case (acc, (key, value)) =>
-            rhs(key).fold(acc.add(key, value)) { r =>
-              acc.add(key, merge(value, r))
+        fromObject.toIterable.foldLeft(toObject) {
+          case (to, (fromKey, fromValue)) =>
+            toObject(fromKey).fold(to.add(fromKey, fromValue)) { toValue =>
+              to.add(fromKey, merge(fromValue, toValue))
             }
         }
       )
-    case _ => right
+    case _ => Json.fromJsonObject(fromObject)
   }
 
-  private def mergeArrays(left: Vector[Json], right: Json): Json = right.asArray match {
-    case Some(rhs) => fromValues(rhs ++ left)
-    case _         => right
+  private def mergeArrays(fromArray: Vector[Json], to: Json): Json = to.asArray match {
+    case Some(toArray) => fromValues(toArray ++ fromArray)
+    case _             => Json.fromValues(fromArray)
   }
 }
