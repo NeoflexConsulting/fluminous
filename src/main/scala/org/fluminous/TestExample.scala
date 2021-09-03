@@ -43,12 +43,8 @@ object TestExample {
 
     val json     = Source.fromResource("Routing.json").mkString
     val workflow = BaseWorkflow.fromSource(json)
-    val routing  = Routing.fromWorkflow(workflow)
-    val resource = this.getClass.getClassLoader.getResource("CustomerService.json")
-    val parser   = new OpenAPIParser().readLocation(resource.toString, null, null)
-    parser.getMessages.asScala.foreach(println)
-    val openApi = parser.getOpenAPI
-    openApi.getServers.asScala.foreach(s => println(s.getUrl))
+    val settings = Settings(Map("CustomerService" -> "localhost"))
+    val routing  = Routing.fromWorkflow[Id](settings, workflow)
     //Creating router
     routing.foreach { r =>
       val router  = serviceCollection.toRouter[String, Customer](r)

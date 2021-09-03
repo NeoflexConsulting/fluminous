@@ -5,7 +5,7 @@ import org.fluminous.runtime.{ ExecutionRuntime, Router }
 import cats.Monad
 import cats.data.EitherT
 import io.circe.{ Decoder, Encoder, Json }
-import org.fluminous.routing.{ ExecutionStep, Finish, RoutingStep }
+import org.fluminous.routing.{ ExecutionStep, Finish, Routing }
 
 case class ServiceCollection[F[_]: Monad] private (private val services: Map[String, Service[F]]) {
 
@@ -13,11 +13,11 @@ case class ServiceCollection[F[_]: Monad] private (private val services: Map[Str
     ServiceCollection(this.services.updated(service.name, service))
   }
 
-  def toRouter[Rq: Encoder, Rs: Decoder](routingStep: RoutingStep): Router[F, Rq, Rs] = {
-    new TypedRouter[F, Rq, Rs](new UntypedRouter[F](services, routingStep))
+  def toRouter[Rq: Encoder, Rs: Decoder](routing: Routing[F]): Router[F, Rq, Rs] = {
+    new TypedRouter[F, Rq, Rs](new UntypedRouter[F](services, routing))
   }
 
-  def toUntypedRouter(routingStep: RoutingStep): Router[F, Json, Json] = { new UntypedRouter[F](services, routingStep) }
+  def toUntypedRouter(routing: Routing[F]): Router[F, Json, Json] = { new UntypedRouter[F](services, routing) }
 
   private class TypedRouter[F[_]: Monad, Rq: Encoder, Rs: Decoder](private val untypedRouter: UntypedRouter[F])
       extends Router[F, Rq, Rs] {
@@ -36,11 +36,13 @@ case class ServiceCollection[F[_]: Monad] private (private val services: Map[Str
     }
   }
 
-  private class UntypedRouter[F[_]: Monad](private val services: Map[String, Service[F]], routingStep: RoutingStep)
+  private class UntypedRouter[F[_]: Monad](private val services: Map[String, Service[F]], routing: Routing[F])
       extends Router[F, Json, Json] {
 
     override def routeRequest(input: Json): F[Either[ExecutionRuntimeException, Json]] = {
-      val rc = executeNextStep(EitherT.pure(ExecutionRuntime[F](services, input, routingStep)))
+      val rc = executeNextStep(
+        EitherT.pure(ExecutionRuntime[F](services ++ routing.services, input, routing.firstStep))
+      )
       rc.value
     }
 

@@ -1,5 +1,7 @@
 package org.fluminous.routing
 
+import cats.Monad
+import cats.syntax.traverse._
 import io.serverlessworkflow.api.Workflow
 import io.serverlessworkflow.api.actions.Action
 import io.serverlessworkflow.api.interfaces.State
@@ -10,10 +12,16 @@ import org.fluminous.jq.tokens.Root
 import org.fluminous.runtime.exception.{
   ActionNotFound,
   ConditionNotFound,
+  DuplicatedOperationId,
   ExpressionNotFound,
   InitialStateNotFound,
+  InvalidOperation,
   InvalidStateReference,
   JqParserError,
+  OpenAPIParsingError,
+  OperationMissing,
+  OperationNotFoundInOpenAPI,
+  ServerNotFoundForDocument,
   UnsupportedStateType,
   WorkFlowBuildException
 }
@@ -21,16 +29,25 @@ import org.fluminous.runtime.exception.{
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import cats.syntax.traverse._
+import io.serverlessworkflow.api.functions.FunctionDefinition
+import io.serverlessworkflow.api.workflow.Functions
+import io.swagger.parser.OpenAPIParser
+import io.swagger.v3.oas.models.OpenAPI
+import org.fluminous.Settings
+import org.fluminous.services.{ RestService, Service }
+
+case class Routing[F[_]: Monad](firstStep: RoutingStep, services: Map[String, Service[F]])
 
 object Routing extends Parser {
-  def fromWorkflow(workflow: Workflow): Either[WorkFlowBuildException, RoutingStep] = {
+  def fromWorkflow[F[_]: Monad](settings: Settings, workflow: Workflow): Either[WorkFlowBuildException, Routing[F]] = {
     val states = workflow.getStates.asScala.toList
     for {
+      services           <- getServices(settings, workflow.getFunctions)
       initialState       <- findInitialState(workflow)
       intermediateStates = states.filter(_.getName != initialState.getName)
       readySteps         <- buildSteps(intermediateStates, Right(Map.empty))
       initialState       <- buildStep(readySteps)(initialState)
-    } yield initialState._2
+    } yield Routing[F](initialState._2, services)
   }
 
   @tailrec
@@ -136,8 +153,8 @@ object Routing extends Parser {
   }
 
   private def readArguments(action: Action): Either[WorkFlowBuildException, Map[String, Filter]] = {
-    val entries   = action.getFunctionRef.getArguments.fields().asScala.toList
-    val arguments = entries.map(entry => (entry.getKey, entry.getValue.asText()))
+    val entries       = action.getFunctionRef.getArguments.fields().asScala.toList
+    val arguments     = entries.map(entry => (entry.getKey, entry.getValue.asText()))
     val parsedFilters = arguments.map { case (name, value) => extractFilter(value).map(f => (name, f)) }.sequence
     parsedFilters.map(_.toMap)
   }
@@ -174,5 +191,71 @@ object Routing extends Parser {
 
   private def asOption[T, U](t: T)(f: T => U): Option[U] = {
     if (t != null) Option(f(t)) else None
+  }
+
+  private def getServices[F[_]: Monad](
+    settings: Settings,
+    functions: Functions
+  ): Either[WorkFlowBuildException, Map[String, Service[F]]] = {
+    functions.getFunctionDefs.asScala.toList.filter(isRest).traverse(getService[F](settings, _)).map(_.toMap)
+  }
+
+  private def getService[F[_]: Monad](
+    settings: Settings,
+    functionDef: FunctionDefinition
+  ): Either[WorkFlowBuildException, (String, Service[F])] = {
+    Option(functionDef.getOperation)
+      .toRight(OperationMissing(functionDef.getName))
+      .flatMap(getService[F](settings, _))
+      .map(s => (s.name, s))
+  }
+
+  private def getService[F[_]: Monad](
+    settings: Settings,
+    operation: String
+  ): Either[WorkFlowBuildException, Service[F]] = {
+    operation.split("#").toList match {
+      case document :: operationId :: Nil =>
+        settings.servers
+          .get(document)
+          .toRight(ServerNotFoundForDocument(document))
+          .flatMap(getService(_, document, operationId))
+      case _ =>
+        InvalidOperation(operation)
+    }
+  }
+
+  private def getService[F[_]: Monad](
+    server: String,
+    document: String,
+    operationId: String
+  ): Either[WorkFlowBuildException, Service[F]] = {
+    val resource = this.getClass.getClassLoader.getResource(document)
+    val parser   = new OpenAPIParser().readLocation(resource.toString, null, null)
+    Option(parser.getOpenAPI)
+      .toRight(OpenAPIParsingError(document, parser.getMessages.asScala.toList))
+      .flatMap(getService(server, document, operationId, _))
+  }
+
+  private def getService[F[_]: Monad](
+    server: String,
+    document: String,
+    operationId: String,
+    openAPI: OpenAPI
+  ): Either[WorkFlowBuildException, Service[F]] = {
+    val services = for {
+      pathItem  <- openAPI.getPaths.asScala
+      operation <- pathItem._2.readOperationsMap().asScala if operation._2.getOperationId == operationId
+    } yield new RestService(server, pathItem._1, operation._1, operation._2)
+    services.toList match {
+      case Nil            => OperationNotFoundInOpenAPI(document, operationId)
+      case service :: Nil => Right(service)
+      case _ :: _ :: _    => DuplicatedOperationId(document, operationId)
+    }
+  }
+
+  private def isRest(functionDef: FunctionDefinition): Boolean = {
+    val functionType = Option(functionDef.getType)
+    functionType.contains(FunctionDefinition.Type.REST) || functionType.isEmpty
   }
 }
