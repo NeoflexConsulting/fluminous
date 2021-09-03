@@ -41,7 +41,7 @@ object TestAsyncExample {
 
     val json     = Source.fromResource("Routing.json").mkString
     val workflow = BaseWorkflow.fromSource(json)
-    val settings = Settings(Map("CustomerService" -> "localhost"))
+    val settings = Settings(Map("CustomerService.json" -> "localhost"))
     val routing  = Routing.fromWorkflow[Future](settings, workflow)
     //Creating router
     routing.foreach { r =>

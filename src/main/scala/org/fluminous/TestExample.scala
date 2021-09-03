@@ -43,7 +43,7 @@ object TestExample {
 
     val json     = Source.fromResource("Routing.json").mkString
     val workflow = BaseWorkflow.fromSource(json)
-    val settings = Settings(Map("CustomerService" -> "localhost"))
+    val settings = Settings(Map("CustomerService.json" -> "localhost"))
     val routing  = Routing.fromWorkflow[Id](settings, workflow)
     //Creating router
     routing.foreach { r =>

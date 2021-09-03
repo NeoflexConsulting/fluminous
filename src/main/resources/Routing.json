@@ -8,7 +8,7 @@
   "functions": [
     {
       "name": "getCustomer",
-      "operation": "file://CustomerService.json#updateCustomer"
+      "operation": "CustomerService.json#updateCustomer"
     }
   ],
   "states": [
