@@ -87,7 +87,7 @@
       "type": "operation",
       "stateDataFilter": {
         "input": "${.uppercased}",
-        "output": "${ {customer} }"
+        "output": "${ .customer }"
       },
       "actions": [
         {
@@ -110,7 +110,7 @@
       "type": "operation",
       "stateDataFilter": {
         "input": "${.age}",
-        "output": "${ {customer} }"
+        "output": "${ .customer }"
       },
       "actions": [
         {
