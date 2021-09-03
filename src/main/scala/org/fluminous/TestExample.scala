@@ -2,10 +2,11 @@ package org.fluminous
 
 import cats.Id
 import io.serverlessworkflow.api.workflow.BaseWorkflow
+import io.swagger.parser.OpenAPIParser
 import org.fluminous.routing.Routing
 import org.fluminous.services.{ Service, ServiceCollection }
-
 import scala.io.Source
+import scala.collection.JavaConverters._
 
 case class Customer(name: String, age: Int)
 
@@ -40,10 +41,14 @@ object TestExample {
         .addService(getCustomerByNameService)
         .addService(isNumber)
 
-    val json     = Source.fromResource("routing.json").mkString
+    val json     = Source.fromResource("Routing.json").mkString
     val workflow = BaseWorkflow.fromSource(json)
     val routing  = Routing.fromWorkflow(workflow)
-
+    val resource = this.getClass.getClassLoader.getResource("CustomerService.json")
+    val parser   = new OpenAPIParser().readLocation(resource.toString, null, null)
+    parser.getMessages.asScala.foreach(println)
+    val openApi = parser.getOpenAPI
+    openApi.getServers.asScala.foreach(s => println(s.getUrl))
     //Creating router
     routing.foreach { r =>
       val router  = serviceCollection.toRouter[String, Customer](r)

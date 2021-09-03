@@ -5,6 +5,12 @@
   "name": "Sample Workflow",
   "description": "Sample Workflow",
   "start": "InitialState",
+  "functions": [
+    {
+      "name": "getCustomer",
+      "operation": "file://CustomerService.json#updateCustomer"
+    }
+  ],
   "states": [
     {
       "name": "InitialState",

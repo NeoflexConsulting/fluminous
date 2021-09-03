@@ -39,7 +39,7 @@ object TestAsyncExample {
         .addService(getCustomerByNameService)
         .addService(isNumber)
 
-    val json     = Source.fromResource("routing.json").mkString
+    val json     = Source.fromResource("Routing.json").mkString
     val workflow = BaseWorkflow.fromSource(json)
     val routing  = Routing.fromWorkflow(workflow)
 
