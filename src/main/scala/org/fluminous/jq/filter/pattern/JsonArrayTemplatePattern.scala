@@ -3,12 +3,14 @@ package org.fluminous.jq.filter.pattern
 import io.circe.Json
 import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.{ JsonArrayTemplate, JsonArrayTemplateConstructor, JsonObjectTemplate, Selector }
-import org.fluminous.jq.tokens.{ DecimalNumber, IntegerNumber, LeftSquareBracket, RawString, RightSquareBracket }
+import org.fluminous.jq.tokens.{ DecimalNumber, IntegerNumber, LeftSquareBracket, RawString, RightSquareBracket, Root }
 
 case object JsonArrayTemplatePattern extends ExpressionPattern {
   override val ExpressionCases: PartialFunction[List[Expression], List[Expression]] = {
     case RightSquareBracket :: (s @ Selector(_)) :: JsonArrayTemplateConstructor(seq) :: rest =>
       JsonArrayTemplate((Right(s) +: seq).reverse) :: rest
+    case RightSquareBracket :: Root :: JsonArrayTemplateConstructor(seq) :: rest =>
+      JsonArrayTemplate((Right(Root) +: seq).reverse) :: rest
     case RightSquareBracket :: RawString(value, _) :: JsonArrayTemplateConstructor(seq) :: rest =>
       JsonArrayTemplate((Left(Json.fromString(value)) +: seq).reverse) :: rest
     case RightSquareBracket :: (value @ IntegerNumber(_)) :: JsonArrayTemplateConstructor(seq) :: rest =>
@@ -20,6 +22,8 @@ case object JsonArrayTemplatePattern extends ExpressionPattern {
 
     case RightSquareBracket :: (s @ Selector(_)) :: LeftSquareBracket :: rest =>
       JsonArrayTemplate(Seq(Right(s))) :: rest
+    case RightSquareBracket :: Root :: LeftSquareBracket :: rest =>
+      JsonArrayTemplate(Seq(Right(Root))) :: rest
     case RightSquareBracket :: RawString(value, _) :: LeftSquareBracket :: rest =>
       JsonArrayTemplate(Seq(Left(Json.fromString(value)))) :: rest
     case RightSquareBracket :: (value @ IntegerNumber(_)) :: LeftSquareBracket :: rest =>

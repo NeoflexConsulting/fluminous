@@ -10,7 +10,7 @@ trait ExpressionPattern {
 object ExpressionPattern {
   val patterns = List(
     SelectorPattern,
-    JsonTupleTemplatePattern,
+    JsonTupleHeaderPattern,
     JsonObjectTemplatePattern,
     JsonObjectTemplateConstructorPattern,
     JsonArrayTemplatePattern,
