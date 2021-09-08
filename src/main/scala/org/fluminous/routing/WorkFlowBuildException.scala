@@ -1,4 +1,4 @@
-package org.fluminous.runtime.exception
+package org.fluminous.routing
 
 import org.fluminous.jq.ParserException
 
@@ -51,6 +51,9 @@ case class OperationNotFoundInOpenAPI(document: String, operationId: String)
 
 case class ServerNotFoundForDocument(document: String)
     extends WorkFlowBuildException(s"Server name is not defined in settings for document $document")
+
+final case class ServiceNotFoundException(serviceName: String)
+    extends WorkFlowBuildException(s"Service with name $serviceName not found")
 
 object WorkFlowBuildException {
   implicit def toEither[A](e: WorkFlowBuildException): Either[WorkFlowBuildException, A] = Left(e)

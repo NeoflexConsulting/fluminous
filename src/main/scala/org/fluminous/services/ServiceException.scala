@@ -1,4 +1,4 @@
-package org.fluminous.runtime.exception
+package org.fluminous.services
 
 import io.circe.DecodingFailure
 

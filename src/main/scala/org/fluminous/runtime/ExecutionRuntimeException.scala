@@ -1,6 +1,7 @@
-package org.fluminous.runtime.exception
+package org.fluminous.runtime
 
-import io.circe.{ DecodingFailure, Json }
+import io.circe.{DecodingFailure, Json}
+import org.fluminous.services.ServiceException
 
 sealed class ExecutionRuntimeException(val message: String, val cause: Option[Exception] = Option.empty)
     extends Exception(message, cause.orNull)
@@ -21,9 +22,6 @@ final case class ActionFilterEvaluatedToNull(stateName: String)
 
 final case class ConditionEvaluatedToNonBoolean(stateName: String, value: Json)
     extends ExecutionRuntimeException(s"Condition in state ${stateName} evaluated to non-boolean value: $value")
-
-final case class ServiceNotFoundException(serviceName: String)
-    extends ExecutionRuntimeException(s"Service with name $serviceName not found")
 
 final case class ServiceExecutionException(exception: ServiceException)
     extends ExecutionRuntimeException(

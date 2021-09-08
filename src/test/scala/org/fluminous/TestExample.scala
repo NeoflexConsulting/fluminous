@@ -1,51 +1,33 @@
 package org.fluminous
 
-import cats.Id
 import io.serverlessworkflow.api.workflow.BaseWorkflow
 import org.fluminous.model.Customer
-import org.fluminous.routing.Routing
-import org.fluminous.services.{Service, ServiceCollection}
+import org.fluminous.services.ServiceCollection
 
+import scala.concurrent.Future
 import scala.io.Source
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object TestExample {
   def main(args: Array[String]): Unit = {
     import io.circe.generic.auto._
-    //Services
-    val upperCaseService   = Service[String, String]("upper", _.toUpperCase, "input")
-    val incrementService   = Service[Int, Int]("increment", _ + 1, "input")
-    val toStringService    = Service[Int, String]("to_string", _.toString, "input")
-    val toIntService       = Service[String, Int]("to_int", _.toInt, "input")
-    val getAgeService      = Service[Customer, Int]("get_age", _.age, "input")
-    val getNameService     = Service[Customer, String]("get_name", _.name, "input")
-    val increaseAgeService = Service[Customer, Customer]("increase_age", c => c.copy(age = c.age + 1), "input")
-    val getCustomerByAgeService =
-      Service[Int, Customer]("get_customer_by_age", Customer("testCustomer", _), "input")
-    val getCustomerByNameService =
-      Service[String, Customer]("get_customer_by_name", Customer(_, 25), "input")
-    val isNumber = Service[String, Boolean]("is_number", _.forall(_.isDigit), "input")
-
     //Filling service collection
     val serviceCollection =
-      ServiceCollection[Id]()
-        .addService(upperCaseService)
-        .addService(incrementService)
-        .addService(toStringService)
-        .addService(toIntService)
-        .addService(getAgeService)
-        .addService(getNameService)
-        .addService(increaseAgeService)
-        .addService(getCustomerByAgeService)
-        .addService(getCustomerByNameService)
-        .addService(isNumber)
+      ServiceCollection[Future]()
+        .addSyncService[String, String]("upper", _.toUpperCase, "input")
+        .addSyncService[Int, Int]("increment", _ + 1, "input")
+        .addSyncService[Int, String]("to_string", _.toString, "input")
+        .addSyncService[String, Int]("to_int", _.toInt, "input")
+        .addSyncService[Customer, Int]("get_age", _.age, "input")
+        .addSyncService[Customer, String]("get_name", _.name, "input")
+        .addSyncService[Customer, Customer]("increase_age", c => c.copy(age = c.age + 1), "input")
+        .addSyncService[Int, Customer]("get_customer_by_age", Customer("testCustomer", _), "input")
+        .addSyncService[String, Customer]("get_customer_by_name", Customer(_, 25), "input")
+        .addSyncService[String, Boolean]("is_number", _.forall(_.isDigit), "input")
 
     val json     = Source.fromResource("Routing.json").mkString
-    val workflow = BaseWorkflow.fromSource(json)
     val settings = Settings(Map("CustomerService.json" -> "localhost"))
-    val routing  = Routing.fromWorkflow[Id](settings, workflow)
-    //Creating router
-    routing.foreach { r =>
-      val router  = serviceCollection.toRouter[String, Customer](r)
+    serviceCollection.toRouter[String, Customer](json, settings).foreach { router =>
       val result1 = router.routeRequest("Иван")
       println(result1)
       val result2 = router.routeRequest("12")

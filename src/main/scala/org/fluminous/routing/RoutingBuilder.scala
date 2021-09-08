@@ -1,7 +1,6 @@
 package org.fluminous.routing
 
-import cats.Monad
-import cats.syntax.traverse._
+import cats.{ Monad, MonadThrow }
 import io.serverlessworkflow.api.Workflow
 import io.serverlessworkflow.api.actions.Action
 import io.serverlessworkflow.api.interfaces.State
@@ -9,71 +8,58 @@ import io.serverlessworkflow.api.states.{ OperationState, SwitchState }
 import org.fluminous.jq.Parser
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.tokens.Root
-import org.fluminous.runtime.exception.{
-  ActionNotFound,
-  ConditionNotFound,
-  DuplicatedOperationId,
-  ExpressionNotFound,
-  InitialStateNotFound,
-  InvalidOperation,
-  InvalidStateReference,
-  JqParserError,
-  OpenAPIParsingError,
-  OperationMissing,
-  OperationNotFoundInOpenAPI,
-  ServerNotFoundForDocument,
-  UnsupportedStateType,
-  WorkFlowBuildException
-}
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import cats.syntax.traverse._
+import io.circe.Json
 import io.serverlessworkflow.api.functions.FunctionDefinition
 import io.serverlessworkflow.api.workflow.Functions
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.OpenAPI
 import org.fluminous.Settings
+import org.fluminous.runtime.{ ActionExecutor, OperationExecutor, SwitchExecutor }
 import org.fluminous.services.Service
 import org.fluminous.services.rest.RestService
 
-case class Routing[F[_]: Monad](firstStep: RoutingStep, services: Map[String, Service[F]])
-
-object Routing extends Parser {
-  def fromWorkflow[F[_]: Monad](settings: Settings, workflow: Workflow): Either[WorkFlowBuildException, Routing[F]] = {
+class RoutingBuilder[F[_]: MonadThrow](builtInServices: Map[String, Service[F]], settings: Settings) extends Parser {
+  type Result[T] = Either[WorkFlowBuildException, T]
+  def fromWorkflow(workflow: Workflow): Result[Json => F[Json]] = {
     val states = workflow.getStates.asScala.toList
     for {
-      services           <- getServices(settings, workflow.getFunctions)
+      configuredServices <- getServices(workflow.getFunctions)
+      services           = builtInServices ++ configuredServices
       initialState       <- findInitialState(workflow)
       intermediateStates = states.filter(_.getName != initialState.getName)
-      readySteps         <- buildSteps(intermediateStates, Right(Map.empty))
-      initialState       <- buildStep(readySteps)(initialState)
-    } yield Routing[F](initialState._2, services)
+      readySteps         <- buildSteps(intermediateStates, services, Right(Map.empty))
+      initialState       <- buildStep(services, readySteps)(initialState)
+    } yield initialState._2
   }
 
   @tailrec
   private def buildSteps(
     states: List[State],
-    readySteps: Either[WorkFlowBuildException, Map[String, RoutingStep]]
-  ): Either[WorkFlowBuildException, Map[String, RoutingStep]] = {
+    services: Map[String, Service[F]],
+    readySteps: Result[Map[String, Json => F[Json]]]
+  ): Result[Map[String, Json => F[Json]]] = {
     import cats.instances.either._, cats.syntax.traverse._
     readySteps match {
       case e @ Left(_) => e
       case Right(steps) =>
         val (readyForBuilding, notReadyForBuilding) = states.partition(couldBeBuilt(steps))
         val updatedReadySteps =
-          readyForBuilding.map(buildStep(steps)).sequence.map(b => b.toMap ++ steps)
+          readyForBuilding.map(buildStep(services, steps)).sequence.map(b => b.toMap ++ steps)
         if (readyForBuilding.isEmpty) {
           Right(steps)
         } else {
-          buildSteps(notReadyForBuilding, updatedReadySteps)
+          buildSteps(notReadyForBuilding, services, updatedReadySteps)
         }
     }
   }
 
-  private def couldBeBuilt(readySteps: Map[String, RoutingStep])(state: State): Boolean = {
+  private def couldBeBuilt(readySteps: Map[String, Json => F[Json]])(state: State): Boolean = {
     state match {
-      case operationState: OperationStateAlg =>
+      case operationState: OperationState =>
         isFinal(operationState) ||
           asOption(operationState.getTransition)(_.getNextState).exists(readySteps.contains)
       case switchState: SwitchState =>
@@ -84,13 +70,14 @@ object Routing extends Parser {
   }
 
   private def buildStep(
-    readySteps: Map[String, RoutingStep]
+    services: Map[String, Service[F]],
+    readySteps: Map[String, Json => F[Json]]
   )(
     state: State
-  ): Either[WorkFlowBuildException, (String, RoutingStep)] = {
+  ): Result[(String, Json => F[Json])] = {
     state match {
-      case operationState: OperationStateAlg =>
-        buildStep(operationState, readySteps)
+      case operationState: OperationState =>
+        buildStep(operationState, services, readySteps)
       case switchState: SwitchState =>
         buildStep(switchState, readySteps)
       case _ =>
@@ -100,8 +87,8 @@ object Routing extends Parser {
 
   private def buildStep(
     state: SwitchState,
-    readySteps: Map[String, RoutingStep]
-  ): Either[WorkFlowBuildException, (String, RoutingStep)] = {
+    readySteps: Map[String, Json => F[Json]]
+  ): Result[(String, Json => F[Json])] = {
     for {
 
       condition           <- state.getDataConditions.asScala.headOption.toRight(ConditionNotFound(state.getName))
@@ -116,34 +103,31 @@ object Routing extends Parser {
                       .get(state.getDefault.getTransition.getNextState)
                       .toRight(InvalidStateReference(state.getName, state.getDefault.getTransition.getNextState))
     } yield {
-      state.getName -> Switch(state.getName, inputFilter, outputFilter, conditionFilter, ifTrueStep, ifFalseStep)
+      state.getName -> SwitchExecutor(state.getName, inputFilter, outputFilter, conditionFilter)
+        .execute(ifTrueStep, ifFalseStep) _
     }
   }
 
   private def buildStep(
-    state: OperationStateAlg,
-    readySteps: Map[String, RoutingStep]
-  ): Either[WorkFlowBuildException, (String, RoutingStep)] = {
+    state: OperationState,
+    services: Map[String, Service[F]],
+    readySteps: Map[String, Json => F[Json]]
+  ): Result[(String, Json => F[Json])] = {
     for {
-      actions      <- Option(state.getActions).flatMap(_.asScala).toList.traverse(readAction)
+      actions      <- Option(state.getActions).map(_.asScala.toList).toList.flatten.traverse(readAction(_, services))
       inputFilter  <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(Root))
       outputFilter <- asOption(state.getStateDataFilter)(_.getOutput).map(extractFilter).getOrElse(Right(Root))
-      nextState    <- getNextState(state, readySteps)
+      nextStep     <- getNextStep(state, readySteps)
     } yield {
-      state.getName -> Operation(
-        state.getName,
-        inputFilter,
-        outputFilter,
-        actions,
-        nextState
-      )
+      state.getName -> OperationExecutor(state.getName, inputFilter, outputFilter).execute(actions, nextStep) _
     }
   }
 
-  private def readAction(action: Action): Either[WorkFlowBuildException, Invocation] = {
+  private def readAction(action: Action, services: Map[String, Service[F]]): Result[Json => F[Option[Json]]] = {
     for {
       arguments    <- readArguments(action)
       functionName = action.getFunctionRef.getRefName
+      service      <- services.get(functionName).toRight(ServiceNotFoundException(functionName))
       fromStateDataFilter <- asOption(action.getActionDataFilter)(_.getFromStateData)
                               .map(extractFilter)
                               .getOrElse(Right(Root))
@@ -152,36 +136,33 @@ object Routing extends Parser {
                             .map(extractFilter)
                             .getOrElse(Right(Root))
     } yield {
-      Invocation(functionName, arguments, fromStateDataFilter, resultsFilter, toStateDataFilter)
+      ActionExecutor(arguments, fromStateDataFilter, resultsFilter, toStateDataFilter).execute(service) _
     }
   }
 
-  private def readArguments(action: Action): Either[WorkFlowBuildException, Map[String, Filter]] = {
+  private def readArguments(action: Action): Result[Map[String, Filter]] = {
     val entries       = action.getFunctionRef.getArguments.fields().asScala.toList
     val arguments     = entries.map(entry => (entry.getKey, entry.getValue.asText()))
     val parsedFilters = arguments.map { case (name, value) => extractFilter(value).map(f => (name, f)) }.sequence
     parsedFilters.map(_.toMap)
   }
 
-  private def getNextState(
-    state: OperationStateAlg,
-    readySteps: Map[String, RoutingStep]
-  ): Either[WorkFlowBuildException, RoutingStep] = {
+  private def getNextStep(state: OperationState, readySteps: Map[String, Json => F[Json]]): Result[Json => F[Json]] = {
     if (isFinal(state))
-      Right(Finish)
+      Right(Monad[F].pure(_))
     else
       readySteps
         .get(state.getTransition.getNextState)
         .toRight(InvalidStateReference(state.getName, state.getTransition.getNextState))
   }
 
-  private def findInitialState(workFlow: Workflow): Either[WorkFlowBuildException, State] = {
+  private def findInitialState(workFlow: Workflow): Result[State] = {
     workFlow.getStates.asScala
       .find(_.getName == workFlow.getStart.getStateName)
       .toRight(InitialStateNotFound())
   }
 
-  private def extractFilter(expression: String): Either[WorkFlowBuildException, Filter] = {
+  private def extractFilter(expression: String): Result[Filter] = {
     if (!expression.startsWith("${") || !expression.endsWith("}")) {
       Left(ExpressionNotFound(expression))
     } else {
@@ -189,7 +170,7 @@ object Routing extends Parser {
     }
   }
 
-  private def isFinal(state: OperationStateAlg): Boolean = {
+  private def isFinal(state: OperationState): Boolean = {
     state.getEnd != null
   }
 
@@ -197,27 +178,18 @@ object Routing extends Parser {
     if (t != null) Option(f(t)) else None
   }
 
-  private def getServices[F[_]: Monad](
-    settings: Settings,
-    functions: Functions
-  ): Either[WorkFlowBuildException, Map[String, Service[F]]] = {
-    functions.getFunctionDefs.asScala.toList.filter(isRest).traverse(getService[F](settings, _)).map(_.toMap)
+  private def getServices(functions: Functions): Result[Map[String, Service[F]]] = {
+    functions.getFunctionDefs.asScala.toList.filter(isRest).traverse(getService).map(_.toMap)
   }
 
-  private def getService[F[_]: Monad](
-    settings: Settings,
-    functionDef: FunctionDefinition
-  ): Either[WorkFlowBuildException, (String, Service[F])] = {
+  private def getService(functionDef: FunctionDefinition): Result[(String, Service[F])] = {
     Option(functionDef.getOperation)
       .toRight(OperationMissing(functionDef.getName))
-      .flatMap(getService[F](settings, _))
+      .flatMap(getService)
       .map(s => (s.name, s))
   }
 
-  private def getService[F[_]: Monad](
-    settings: Settings,
-    operation: String
-  ): Either[WorkFlowBuildException, Service[F]] = {
+  private def getService(operation: String): Result[Service[F]] = {
     operation.split("#").toList match {
       case document :: operationId :: Nil =>
         settings.servers
@@ -229,11 +201,7 @@ object Routing extends Parser {
     }
   }
 
-  private def getService[F[_]: Monad](
-    server: String,
-    document: String,
-    operationId: String
-  ): Either[WorkFlowBuildException, Service[F]] = {
+  private def getService(server: String, document: String, operationId: String): Result[Service[F]] = {
     val resource = this.getClass.getClassLoader.getResource(document)
     val parser   = new OpenAPIParser().readLocation(resource.toString, null, null)
     Option(parser.getOpenAPI)
@@ -241,12 +209,12 @@ object Routing extends Parser {
       .flatMap(getService(server, document, operationId, _))
   }
 
-  private def getService[F[_]: Monad](
+  private def getService(
     server: String,
     document: String,
     operationId: String,
     openAPI: OpenAPI
-  ): Either[WorkFlowBuildException, Service[F]] = {
+  ): Result[Service[F]] = {
     val services = for {
       pathItem  <- openAPI.getPaths.asScala
       operation <- pathItem._2.readOperationsMap().asScala if operation._2.getOperationId == operationId
