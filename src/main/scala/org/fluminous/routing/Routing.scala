@@ -34,7 +34,8 @@ import io.serverlessworkflow.api.workflow.Functions
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.OpenAPI
 import org.fluminous.Settings
-import org.fluminous.services.{ RestService, Service }
+import org.fluminous.services.Service
+import org.fluminous.services.rest.RestService
 
 case class Routing[F[_]: Monad](firstStep: RoutingStep, services: Map[String, Service[F]])
 
@@ -72,7 +73,7 @@ object Routing extends Parser {
 
   private def couldBeBuilt(readySteps: Map[String, RoutingStep])(state: State): Boolean = {
     state match {
-      case operationState: OperationState =>
+      case operationState: OperationStateAlg =>
         isFinal(operationState) ||
           asOption(operationState.getTransition)(_.getNextState).exists(readySteps.contains)
       case switchState: SwitchState =>
@@ -88,7 +89,7 @@ object Routing extends Parser {
     state: State
   ): Either[WorkFlowBuildException, (String, RoutingStep)] = {
     state match {
-      case operationState: OperationState =>
+      case operationState: OperationStateAlg =>
         buildStep(operationState, readySteps)
       case switchState: SwitchState =>
         buildStep(switchState, readySteps)
@@ -120,15 +121,29 @@ object Routing extends Parser {
   }
 
   private def buildStep(
-    state: OperationState,
+    state: OperationStateAlg,
     readySteps: Map[String, RoutingStep]
   ): Either[WorkFlowBuildException, (String, RoutingStep)] = {
     for {
-      action       <- state.getActions.asScala.headOption.toRight(ActionNotFound(state.getName))
-      functionName = action.getFunctionRef.getRefName
-      arguments    <- readArguments(action)
+      actions      <- Option(state.getActions).flatMap(_.asScala).toList.traverse(readAction)
       inputFilter  <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(Root))
       outputFilter <- asOption(state.getStateDataFilter)(_.getOutput).map(extractFilter).getOrElse(Right(Root))
+      nextState    <- getNextState(state, readySteps)
+    } yield {
+      state.getName -> Operation(
+        state.getName,
+        inputFilter,
+        outputFilter,
+        actions,
+        nextState
+      )
+    }
+  }
+
+  private def readAction(action: Action): Either[WorkFlowBuildException, Invocation] = {
+    for {
+      arguments    <- readArguments(action)
+      functionName = action.getFunctionRef.getRefName
       fromStateDataFilter <- asOption(action.getActionDataFilter)(_.getFromStateData)
                               .map(extractFilter)
                               .getOrElse(Right(Root))
@@ -136,19 +151,8 @@ object Routing extends Parser {
       toStateDataFilter <- asOption(action.getActionDataFilter)(_.getToStateData)
                             .map(extractFilter)
                             .getOrElse(Right(Root))
-      nextState <- getNextState(state, readySteps)
     } yield {
-      state.getName -> Operation(
-        state.getName,
-        inputFilter,
-        outputFilter,
-        functionName,
-        arguments,
-        fromStateDataFilter,
-        resultsFilter,
-        toStateDataFilter,
-        nextState
-      )
+      Invocation(functionName, arguments, fromStateDataFilter, resultsFilter, toStateDataFilter)
     }
   }
 
@@ -160,7 +164,7 @@ object Routing extends Parser {
   }
 
   private def getNextState(
-    state: OperationState,
+    state: OperationStateAlg,
     readySteps: Map[String, RoutingStep]
   ): Either[WorkFlowBuildException, RoutingStep] = {
     if (isFinal(state))
@@ -185,7 +189,7 @@ object Routing extends Parser {
     }
   }
 
-  private def isFinal(state: OperationState): Boolean = {
+  private def isFinal(state: OperationStateAlg): Boolean = {
     state.getEnd != null
   }
 

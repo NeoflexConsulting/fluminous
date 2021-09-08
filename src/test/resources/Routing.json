@@ -1,0 +1,134 @@
+{
+  "id": "sampleWorkflow",
+  "version": "1.0",
+  "schemaVersion": "0.7",
+  "name": "Sample Workflow",
+  "description": "Sample Workflow",
+  "start": "InitialState",
+  "functions": [
+    {
+      "name": "getCustomer",
+      "operation": "CustomerService.json#getCustomer"
+    },
+    {
+      "name": "updateCustomer",
+      "operation": "CustomerService.json#updateCustomer"
+    }
+  ],
+  "states": [
+    {
+      "name": "InitialState",
+      "type": "operation",
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "getCustomer",
+            "arguments": {
+              "input": "${.customerId}"
+            }
+          },
+          "actionDataFilter": {
+            "toStateData": "${ {prevName: .name, prevAge: .age} }"
+          }
+        },
+        {
+          "functionRef": {
+            "refName": "isEmpty",
+            "arguments": {
+              "input": "${.name}"
+            }
+          },
+          "actionDataFilter": {
+            "toStateData": "${ {isEmptyName: .} }"
+          }
+        },
+        {
+          "functionRef": {
+            "refName": "isEmpty",
+            "arguments": {
+              "input": "${.age}"
+            }
+          },
+          "actionDataFilter": {
+            "toStateData": "${ {isEmptyAge: .} }"
+          }
+        }
+      ],
+      "transition": "CheckName"
+    },
+    {
+      "name": "CheckName",
+      "type": "switch",
+      "stateDataFilter": {
+        "input": "${.}",
+        "output": "${.}"
+      },
+      "dataConditions": [
+        {
+          "condition": "${.isEmptyName}",
+          "transition": "FillName"
+        }
+      ],
+      "default": {
+        "transition": "CheckAge"
+      }
+    },
+    {
+      "name": "FillName",
+      "type": "operation",
+      "stateDataFilter": {
+        "input": "${.}",
+        "output": "${ {customerId, isEmptyName, isEmptyAge, name: .prevName, age, prevAge} }"
+      },
+      "transition": "CheckAge"
+    },
+    {
+      "name": "CheckAge",
+      "type": "switch",
+      "stateDataFilter": {
+        "input": "${.}",
+        "output": "${.}"
+      },
+      "dataConditions": [
+        {
+          "condition": "${.isEmptyAge}",
+          "transition": "FillAge"
+        }
+      ],
+      "default": {
+        "transition": "UpdateCustomer"
+      }
+    },
+    {
+      "name": "FillAge",
+      "type": "operation",
+      "stateDataFilter": {
+        "input": "${.}",
+        "output": "${ {customerId, isEmptyName, isEmptyAge, name, age : prevAge} }"
+      },
+      "transition": "UpdateCustomer"
+    },
+    {
+      "name": "UpdateCustomer",
+      "type": "operation",
+      "stateDataFilter": {
+        "input": "${ {customerId, name, age} }",
+        "output": "${name, age}"
+      },
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "updateCustomer",
+            "arguments": {
+              "input": "${customerId, body : {customer: {id : customerId, name, age}} }"
+            }
+          },
+          "actionDataFilter": {
+            "toStateData": "${ {response: .} }"
+          }
+        }
+      ],
+      "end": true
+    }
+  ]
+}

@@ -1,9 +1,11 @@
 package org.fluminous.services
 
-import cats.{ Id, Monad }
+import cats.{Id, Monad}
 import cats.data.EitherT
-import io.circe.{ Decoder, Encoder, Json }
-import org.fluminous.runtime.exception.{ DeserializationException, NotFoundInputParameter, ServiceException }
+import io.circe.{Decoder, Encoder, Json}
+import org.fluminous.runtime.exception.{DeserializationException, NotFoundInputParameter, ServiceException}
+import org.fluminous.services.function.{FunctionService1, FunctionService2, FunctionService3}
+
 import scala.concurrent.Future
 
 abstract class Service[F[_]: Monad](val name: String) {

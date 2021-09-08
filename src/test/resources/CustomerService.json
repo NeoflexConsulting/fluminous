@@ -96,7 +96,7 @@
             "required": true,
             "description": "The id of customer to update",
             "schema": {
-              "type": "integer"
+              "$ref": "#/components/schemas/Customer"
             }
           }
         ],
@@ -195,37 +195,37 @@
         ],
         "properties": {
           "id": {
-            "type": "integer",
-            "format": "int64"
+            "type": "integer"
           },
           "name": {
             "type": "string"
           },
-          "tag": {
-            "type": "string"
+          "age": {
+            "type": "integer"
           }
         }
       },
       "NewCustomer": {
         "required": [
-          "name"
+          "name",
+          "age"
         ],
         "properties": {
           "name": {
             "type": "string"
           },
-          "tag": {
-            "type": "string"
+          "age": {
+            "type": "integer"
           }
         }
       },
       "UpdateCustomer": {
         "required": [
-          "tag"
+          "customer"
         ],
         "properties": {
-          "tag": {
-            "type": "string"
+          "customer": {
+            "$ref": "#/components/schemas/Customer"
           }
         }
       },

@@ -21,8 +21,6 @@ case class JqParserError(exception: ParserException) extends WorkFlowBuildExcept
 case class UnsupportedStateType(stateType: String)
     extends WorkFlowBuildException(s"""Unsupported state type: $stateType"""")
 
-case class ActionNotFound(stateName: String) extends WorkFlowBuildException(s"Action in state ${stateName} not found")
-
 case class ConditionNotFound(stateName: String)
     extends WorkFlowBuildException(s"Condition in state ${stateName} not found")
 

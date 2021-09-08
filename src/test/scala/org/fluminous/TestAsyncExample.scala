@@ -1,12 +1,12 @@
 package org.fluminous
 
 import io.serverlessworkflow.api.workflow.BaseWorkflow
+import org.fluminous.model.Customer
 import org.fluminous.routing.Routing
 import org.fluminous.services.{ AsyncService, ServiceCollection }
-
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 import scala.io.Source
 
 object TestAsyncExample {

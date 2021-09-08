@@ -1,11 +1,11 @@
-package org.fluminous.services
+package org.fluminous.services.function
 
 import cats.Monad
 import cats.data.EitherT
-import cats.data.EitherT.right
+import cats.syntax.functor._
 import io.circe.{Decoder, Encoder, Json}
 import org.fluminous.runtime.exception.ServiceException
-import cats.syntax.functor._
+import org.fluminous.services.Service
 
 final class FunctionService1[F[_]: Monad, IN: Decoder, OUT: Encoder](
     name: String,

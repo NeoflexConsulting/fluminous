@@ -20,3 +20,9 @@ case class NotFoundInputParameter(override val serviceName: String, expectedPara
 
 class IncompatibleTypeException(serviceName: String, expectedType: String, actualType: String)
     extends ServiceException(serviceName, s"Incompatible input type. Expected: $expectedType, actual: $actualType")
+
+class RequiredInputParameterIsMissing(serviceName: String, parameterName: String)
+    extends ServiceException(serviceName, s"Required input parameter $parameterName is missing")
+
+class JSONInputParameterType(serviceName: String, parameterName: String)
+    extends ServiceException(serviceName, s"Parameter $parameterName is JSON Object, while JSON value expected")

@@ -33,11 +33,7 @@ final case class Operation(
   stateName: String,
   inputFilter: Filter,
   outputFilter: Filter,
-  functionName: String,
-  arguments: Map[String, Filter],
-  fromStateDataFilter: Filter,
-  resultsFilter: Filter,
-  toStateDataFilter: Filter,
+  actions: Seq[Invocation],
   nextStep: RoutingStep)
     extends ExecutionStep {
   override def executeInRuntime[F[_]: Monad](
@@ -46,5 +42,12 @@ final case class Operation(
     runtime.executeOperation(this)
   }
 }
+
+case class Invocation(
+  functionName: String,
+  arguments: Map[String, Filter],
+  fromStateDataFilter: Filter,
+  resultsFilter: Filter,
+  toStateDataFilter: Filter)
 
 case object Finish extends RoutingStep

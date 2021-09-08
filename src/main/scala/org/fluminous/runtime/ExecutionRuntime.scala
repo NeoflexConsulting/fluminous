@@ -5,7 +5,7 @@ import cats.data.EitherT
 import io.circe.{ Json, JsonObject }
 import io.circe.Json.{ fromJsonObject, fromValues, Null }
 import org.fluminous.jq.filter.Filter
-import org.fluminous.routing.{ Operation, RoutingStep, Switch }
+import org.fluminous.routing.{ Invocation, Operation, RoutingStep, Switch }
 import org.fluminous.runtime.exception.{
   ActionFilterEvaluatedToNull,
   ConditionEvaluatedToNonBoolean,
@@ -24,10 +24,12 @@ case class ExecutionRuntime[F[_]: Monad](
 
   def executeOperation(operation: Operation): EitherT[F, ExecutionRuntimeException, ExecutionRuntime[F]] = {
     import EitherT._
-    val serviceName = operation.functionName
     for {
-      service       <- fromEither[F](services.get(serviceName).toRight(ServiceNotFoundException(serviceName)))
-      argumentsJson <- fromEither[F](getArguments(operation, contextJson))
+      stateJson <- operation.inputFilter
+                    .transform(contextJson)
+                    .toRight(InputStateFilterEvaluatedToNull(operation.stateName))
+
+      argumentsJson <- fromEither[F](invokeService(operation, contextJson))
       result        <- service.invoke(argumentsJson).leftMap(ServiceExecutionException)
       updatedJson   <- fromEither[F](updateContextJson(operation, contextJson, result))
     } yield this.copy(contextJson = updatedJson, currentStep = operation.nextStep)
@@ -58,15 +60,18 @@ case class ExecutionRuntime[F[_]: Monad](
     result.flatMap(_.asBoolean).toRight(ConditionEvaluatedToNonBoolean(stateName, result.getOrElse(Null)))
   }
 
-  private def getArguments(
-    operation: Operation,
-    contextJson: Json
+  private def invokeService(
+    stateName: String,
+    invocation: Invocation,
+    stateJson: Json
   ): Either[ExecutionRuntimeException, Map[String, Json]] = {
-    val stateName = operation.stateName
+    import EitherT._
+    val serviceName =
     for {
-      stateJson     <- operation.inputFilter.transform(contextJson).toRight(InputStateFilterEvaluatedToNull(stateName))
+      service       <- fromEither[F](services.get(invocation.functionName).toRight(ServiceNotFoundException(serviceName)))
       actionJson    <- operation.fromStateDataFilter.transform(stateJson).toRight(ActionFilterEvaluatedToNull(stateName))
       argumentsJson = operation.arguments.flatMap { case (k, v) => v.transform(actionJson).map(j => (k, j)) }
+
     } yield argumentsJson
   }
 

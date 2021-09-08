@@ -2,13 +2,11 @@ package org.fluminous
 
 import cats.Id
 import io.serverlessworkflow.api.workflow.BaseWorkflow
-import io.swagger.parser.OpenAPIParser
+import org.fluminous.model.Customer
 import org.fluminous.routing.Routing
-import org.fluminous.services.{ Service, ServiceCollection }
-import scala.io.Source
-import scala.collection.JavaConverters._
+import org.fluminous.services.{Service, ServiceCollection}
 
-case class Customer(name: String, age: Int)
+import scala.io.Source
 
 object TestExample {
   def main(args: Array[String]): Unit = {
