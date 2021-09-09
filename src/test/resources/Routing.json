@@ -7,7 +7,7 @@
   "start": "InitialState",
   "functions": [
     {
-      "name": "getCustomer",
+      "name": "updateCustomer",
       "operation": "CustomerService.json#updateCustomer"
     }
   ],

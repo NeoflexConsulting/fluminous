@@ -19,6 +19,8 @@ case object JsonArrayTemplatePattern extends ExpressionPattern {
       JsonArrayTemplate((Left(Json.fromBigDecimal(value.asDecimal)) +: seq).reverse) :: rest
     case RightSquareBracket :: (filter @ JsonObjectTemplate(_)) :: JsonArrayTemplateConstructor(seq) :: rest =>
       JsonArrayTemplate((Right(filter) +: seq).reverse) :: rest
+    case RightSquareBracket :: (filter @ JsonArrayTemplate(_)) :: JsonArrayTemplateConstructor(seq) :: rest =>
+      JsonArrayTemplate((Right(filter) +: seq).reverse) :: rest
 
     case RightSquareBracket :: (s @ Selector(_)) :: LeftSquareBracket :: rest =>
       JsonArrayTemplate(Seq(Right(s))) :: rest
@@ -31,6 +33,8 @@ case object JsonArrayTemplatePattern extends ExpressionPattern {
     case RightSquareBracket :: (value @ DecimalNumber(_)) :: LeftSquareBracket :: rest =>
       JsonArrayTemplate(Seq(Left(Json.fromBigDecimal(value.asDecimal)))) :: rest
     case RightSquareBracket :: (filter @ JsonObjectTemplate(_)) :: LeftSquareBracket :: rest =>
+      JsonArrayTemplate(Seq(Right(filter))) :: rest
+    case RightSquareBracket :: (filter @ JsonArrayTemplate(_)) :: LeftSquareBracket :: rest =>
       JsonArrayTemplate(Seq(Right(filter))) :: rest
   }
 }

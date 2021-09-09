@@ -1,6 +1,6 @@
 package org.fluminous
 
-import org.fluminous.model.Customer
+import org.fluminous.model.{ ChangeAgeRq, ChangeAgeRs, Customer }
 import org.fluminous.services.ServiceCollection
 
 import scala.annotation.tailrec
@@ -8,6 +8,31 @@ import scala.io.Source
 
 object TestExample {
   def main(args: Array[String]): Unit = {
+    //testRouting
+    testRestRouting
+  }
+
+  private def testRestRouting = {
+    import io.circe.generic.auto._
+    //Filling service collection
+    val serviceCollection =
+      ServiceCollection[Either[Throwable, *]]()
+        .addSyncService[Int, Int, Boolean]("isSame", _ == _, "input1", "input2")
+    val json     = Source.fromResource("RESTRouting.json").mkString
+    val settings = Settings(Map("CustomerService.json" -> "localhost"))
+    serviceCollection
+      .toRouter[ChangeAgeRq, ChangeAgeRs](json, settings)
+      .fold(
+        printErrorInfo, { router =>
+          val result1 = router.routeRequest(ChangeAgeRq(123243, 25))
+          println(result1)
+          val result2 = router.routeRequest(ChangeAgeRq(123243, 24))
+          println(result2)
+        }
+      )
+  }
+
+  private def testRouting = {
     import io.circe.generic.auto._
     //Filling service collection
     val serviceCollection =

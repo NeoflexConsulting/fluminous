@@ -13,7 +13,7 @@ import scala.collection.JavaConverters._
 
 class RestService[F[_]: MonadThrow](server: String, path: String, method: HttpMethod, operation: Operation)
     extends Service[F](operation.getOperationId) {
-/*  println("!!!!!!!!!!!!!")
+  /*  println("!!!!!!!!!!!!!")
   println(server)
   println(path)
   operation.getParameters.asScala.map(_.getSchema.get$ref()).foreach(println)*/

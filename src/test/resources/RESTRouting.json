@@ -28,59 +28,22 @@
             }
           },
           "actionDataFilter": {
-            "toStateData": "${ {prevName: .name, prevAge: .age} }"
+            "toStateData": "${ {currentName: .name, currentAge: .age} }"
           }
         },
         {
           "functionRef": {
             "refName": "isSame",
             "arguments": {
-              "input": "${.name}",
-              "input": "${.prevName}"
+              "input1": "${.age}",
+              "input2": "${.currentAge}"
             }
           },
           "actionDataFilter": {
-            "toStateData": "${ {isSameName: .} }"
-          }
-        },
-        {
-          "functionRef": {
-            "refName": "isEmpty",
-            "arguments": {
-              "input": "${.age}"
-            }
-          },
-          "actionDataFilter": {
-            "toStateData": "${ {isEmptyAge: .} }"
+            "toStateData": "${ {isSameAge: .} }"
           }
         }
       ],
-      "transition": "CheckName"
-    },
-    {
-      "name": "CheckName",
-      "type": "switch",
-      "stateDataFilter": {
-        "input": "${.}",
-        "output": "${.}"
-      },
-      "dataConditions": [
-        {
-          "condition": "${.isEmptyName}",
-          "transition": "FillName"
-        }
-      ],
-      "default": {
-        "transition": "CheckAge"
-      }
-    },
-    {
-      "name": "FillName",
-      "type": "operation",
-      "stateDataFilter": {
-        "input": "${.}",
-        "output": "${ {customerId, isEmptyName, isEmptyAge, name: .prevName, age, prevAge} }"
-      },
       "transition": "CheckAge"
     },
     {
@@ -88,12 +51,12 @@
       "type": "switch",
       "stateDataFilter": {
         "input": "${.}",
-        "output": "${.}"
+        "output": "${{customerId, name: .currentName, age}}"
       },
       "dataConditions": [
         {
-          "condition": "${.isEmptyAge}",
-          "transition": "FillAge"
+          "condition": "${.isSameAge}",
+          "transition": "SendResponse"
         }
       ],
       "default": {
@@ -101,27 +64,19 @@
       }
     },
     {
-      "name": "FillAge",
-      "type": "operation",
-      "stateDataFilter": {
-        "input": "${.}",
-        "output": "${ {customerId, isEmptyName, isEmptyAge, name, age : prevAge} }"
-      },
-      "transition": "UpdateCustomer"
-    },
-    {
       "name": "UpdateCustomer",
       "type": "operation",
       "stateDataFilter": {
-        "input": "${ {customerId, name, age} }",
-        "output": "${name, age}"
+        "input": "${.}",
+        "output": "${.}"
       },
       "actions": [
         {
           "functionRef": {
             "refName": "updateCustomer",
             "arguments": {
-              "input": "${customerId, body : {customer: {id : customerId, name, age}} }"
+              "customerId": "${.customerId}",
+              "body": "${ {customer: {id : .customerId, name, age}} }"
             }
           },
           "actionDataFilter": {
@@ -129,6 +84,15 @@
           }
         }
       ],
+      "transition": "SendResponse"
+    },
+    {
+      "name": "SendResponse",
+      "type": "operation",
+      "stateDataFilter": {
+        "input": "${.}",
+        "output": "${{name, age}}"
+      },
       "end": true
     }
   ]

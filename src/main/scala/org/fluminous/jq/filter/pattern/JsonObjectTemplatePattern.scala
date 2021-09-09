@@ -39,6 +39,10 @@ case object JsonObjectTemplatePattern extends ExpressionPattern {
           values
         ) :: rest =>
       JsonObjectTemplate(values + (name -> Right(filter))) :: rest
+    case RightFigureBracket :: (filter @ JsonObjectTemplate(_)) :: JsonTupleHeader(name) :: JsonObjectTemplateConstructor(
+          values
+        ) :: rest =>
+      JsonObjectTemplate(values + (name -> Right(filter))) :: rest
     case RightFigureBracket :: Identifier(value) :: JsonObjectTemplateConstructor(values) :: rest =>
       JsonObjectTemplate(values + (value -> Right(Selector(Seq(value))))) :: rest
     case RightFigureBracket :: RawString(value, _) :: JsonObjectTemplateConstructor(values) :: rest =>
@@ -55,6 +59,8 @@ case object JsonObjectTemplatePattern extends ExpressionPattern {
     case RightFigureBracket :: (value @ DecimalNumber(_)) :: JsonTupleHeader(name) :: LeftFigureBracket :: rest =>
       JsonObjectTemplate(Map(name -> Left(Json.fromBigDecimal(value.asDecimal)))) :: rest
     case RightFigureBracket :: (filter @ JsonArrayTemplate(_)) :: JsonTupleHeader(name) :: LeftFigureBracket :: rest =>
+      JsonObjectTemplate(Map(name -> Right(filter))) :: rest
+    case RightFigureBracket :: (filter @ JsonObjectTemplate(_)) :: JsonTupleHeader(name) :: LeftFigureBracket :: rest =>
       JsonObjectTemplate(Map(name -> Right(filter))) :: rest
     case RightFigureBracket :: Identifier(value) :: LeftFigureBracket :: rest =>
       JsonObjectTemplate(Map(value -> Right(Selector(Seq(value))))) :: rest
