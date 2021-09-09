@@ -9,8 +9,9 @@ import io.serverlessworkflow.api.workflow.BaseWorkflow
 import org.fluminous.Settings
 import org.fluminous.routing.{ RoutingBuilder, WorkFlowBuildException }
 import org.fluminous.services.function.{ FunctionService1, FunctionService2, FunctionService3 }
+import org.fluminous.services.rest.HttpBackend
 
-case class ServiceCollection[F[_]: MonadThrow] private (private val services: Map[String, Service[F]]) {
+case class ServiceCollection[F[_]: MonadThrow: HttpBackend] private (private val services: Map[String, Service[F]]) {
 
   def addSyncService[IN: Decoder, OUT: Encoder](
     serviceName: String,
@@ -137,7 +138,7 @@ case class ServiceCollection[F[_]: MonadThrow] private (private val services: Ma
 }
 
 object ServiceCollection {
-  def apply[F[_]: MonadThrow](): ServiceCollection[F] = {
+  def apply[F[_]: MonadThrow: HttpBackend](): ServiceCollection[F] = {
     ServiceCollection(Map.empty[String, Service[F]])
   }
 }

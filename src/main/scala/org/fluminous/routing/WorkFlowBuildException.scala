@@ -55,6 +55,9 @@ case class ServerNotFoundForDocument(document: String)
 final case class ServiceNotFoundException(serviceName: String)
     extends WorkFlowBuildException(s"Service with name $serviceName not found")
 
+final case class UnsupportedHttpMethod(serviceName: String, method: String)
+    extends WorkFlowBuildException(s"Http method $method used for operation $serviceName is unsupported")
+
 object WorkFlowBuildException {
   implicit def toEither[A](e: WorkFlowBuildException): Either[WorkFlowBuildException, A] = Left(e)
 }

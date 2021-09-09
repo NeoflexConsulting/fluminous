@@ -1,10 +1,10 @@
 package org.fluminous.routing
 
-import cats.{ Monad, MonadThrow }
+import cats.{Monad, MonadThrow}
 import io.serverlessworkflow.api.Workflow
 import io.serverlessworkflow.api.actions.Action
 import io.serverlessworkflow.api.interfaces.State
-import io.serverlessworkflow.api.states.{ OperationState, SwitchState }
+import io.serverlessworkflow.api.states.{OperationState, SwitchState}
 import org.fluminous.jq.Parser
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.tokens.Root
@@ -16,13 +16,15 @@ import io.circe.Json
 import io.serverlessworkflow.api.functions.FunctionDefinition
 import io.serverlessworkflow.api.workflow.Functions
 import io.swagger.parser.OpenAPIParser
-import io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.oas.models.{OpenAPI, Operation}
+import io.swagger.v3.oas.models.PathItem.HttpMethod
 import org.fluminous.Settings
-import org.fluminous.runtime.{ ActionExecutor, OperationExecutor, SwitchExecutor }
+import org.fluminous.runtime.{ActionExecutor, OperationExecutor, SwitchExecutor}
 import org.fluminous.services.Service
-import org.fluminous.services.rest.RestService
+import org.fluminous.services.rest.{DeleteService, GetService, HttpBackend, PostService, PutService, RestService, SubstitutablePath}
 
-class RoutingBuilder[F[_]: MonadThrow](builtInServices: Map[String, Service[F]], settings: Settings) extends Parser {
+class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String, Service[F]], settings: Settings)
+    extends Parser {
   type Result[T] = Either[WorkFlowBuildException, T]
   def fromWorkflow(workflow: Workflow): Result[Json => F[Json]] = {
     val states = workflow.getStates.asScala.toList
@@ -218,11 +220,32 @@ class RoutingBuilder[F[_]: MonadThrow](builtInServices: Map[String, Service[F]],
     val services = for {
       pathItem  <- openAPI.getPaths.asScala
       operation <- pathItem._2.readOperationsMap().asScala if operation._2.getOperationId == operationId
-    } yield new RestService(server, pathItem._1, operation._1, operation._2)
+    } yield getService(server, pathItem._1, operation._1, operation._2)
     services.toList match {
-      case Nil            => OperationNotFoundInOpenAPI(document, operationId)
-      case service :: Nil => Right(service)
-      case _ :: _ :: _    => DuplicatedOperationId(document, operationId)
+      case Nil                   => OperationNotFoundInOpenAPI(document, operationId)
+      case Right(service) :: Nil => Right(service)
+      case Left(ex) :: Nil       => Left(ex)
+      case _ :: _ :: _           => DuplicatedOperationId(document, operationId)
+    }
+  }
+
+  private def getService(
+    server: String,
+    path: String,
+    method: HttpMethod,
+    operation: Operation
+  ): Result[RestService[F]] = {
+    val parameters       = operation.getParameters.asScala
+    val pathParameters   = parameters.filter(_.getIn == "path")
+    val queryParameters  = parameters.filter(_.getIn == "query")
+    val headerParameters = parameters.filter(_.getIn == "header")
+    val substitutablePath = new SubstitutablePath(path,pathParameters,queryParameters)
+    method match {
+      case HttpMethod.POST   => Right(new PostService[F](server, path, operation.getOperationId, substitutablePath,headerParameters))
+      case HttpMethod.PUT    => Right(new PutService[F](server, path, operation.getOperationId, substitutablePath,headerParameters))
+      case HttpMethod.GET    => Right(new GetService[F](server, path, operation.getOperationId, substitutablePath,headerParameters))
+      case HttpMethod.DELETE => Right(new DeleteService[F](server, path, operation.getOperationId, substitutablePath,headerParameters))
+      case _                 => UnsupportedHttpMethod(operation.getOperationId, method.name())
     }
   }
 

@@ -1,6 +1,6 @@
 package org.fluminous.services
 
-import io.circe.DecodingFailure
+import io.circe.{ DecodingFailure, Json, ParsingFailure }
 
 sealed abstract class ServiceException private (val serviceName: String, message: String, cause: Throwable)
     extends Exception(message, cause) {
@@ -18,11 +18,40 @@ case class DeserializationException(override val serviceName: String, deserializ
 case class NotFoundInputParameter(override val serviceName: String, expectedParameter: String)
     extends ServiceException(serviceName, s"Expected input parameter $expectedParameter not found")
 
-class IncompatibleTypeException(serviceName: String, expectedType: String, actualType: String)
+case class IncompatibleTypeException(override val serviceName: String, expectedType: String, actualType: String)
     extends ServiceException(serviceName, s"Incompatible input type. Expected: $expectedType, actual: $actualType")
 
-class RequiredInputParameterIsMissing(serviceName: String, parameterName: String)
-    extends ServiceException(serviceName, s"Required input parameter $parameterName is missing")
+abstract class ValidationFailure(val message: String)
 
-class JSONInputParameterType(serviceName: String, parameterName: String)
-    extends ServiceException(serviceName, s"Parameter $parameterName is JSON Object, while JSON value expected")
+case class RequiredInputParameterIsMissing(parameterName: String)
+    extends ValidationFailure(s"Required input parameter $parameterName is missing")
+
+case class JSONInputParameterType(parameterName: String, isObject: Boolean, isArray: Boolean, isNull: Boolean)
+    extends ValidationFailure(
+      s"Parameter $parameterName is ${if (isObject) "JSON Object" else if (isArray) "JSON Array" else "Null"} while JSON value expected"
+    )
+
+case class ValidationError(override val serviceName: String, exceptions: Seq[ValidationFailure])
+    extends ServiceException(
+      serviceName,
+      s"Parameter validation errors found:\n ${exceptions.map(_.message).mkString("\n")}"
+    )
+
+case class UnsuccessfulHttpStatusCode(override val serviceName: String, url: String, method: String, statusCode: String)
+    extends ServiceException(
+      serviceName,
+      s"""Unsuccessful status code '$statusCode' received by method $method from url: $url"""
+    )
+
+case class HttpInvocationError(override val serviceName: String, error: Throwable)
+    extends ServiceException(serviceName, error)
+
+case class ParsingResponseError(
+  override val serviceName: String,
+  url: String,
+  method: String,
+  parsingError: ParsingFailure)
+    extends ServiceException(
+      serviceName,
+      s"""Error occurred while parsing response from method $method from url $url ${parsingError.message}"""
+    )
