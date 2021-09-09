@@ -16,10 +16,10 @@ case class ExpressionNotFound(foundExpression: String)
       s"""Jq expression should start with $${ and end with }, but found: "${foundExpression}""""
     )
 
-case class JqParserError(exception: ParserException) extends WorkFlowBuildException(exception)
+case class JqParserError(expression: String, exception: ParserException)
+    extends WorkFlowBuildException(s"Error parsing Jq expression: $expression", exception)
 
-case class UnsupportedStateType(stateType: String)
-    extends WorkFlowBuildException(s"""Unsupported state type: $stateType"""")
+case class UnsupportedStateType(stateType: String) extends WorkFlowBuildException(s"Unsupported state type: $stateType")
 
 case class ConditionNotFound(stateName: String)
     extends WorkFlowBuildException(s"Condition in state ${stateName} not found")

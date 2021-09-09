@@ -3,6 +3,7 @@ package org.fluminous
 import org.fluminous.model.Customer
 import org.fluminous.services.ServiceCollection
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
@@ -26,23 +27,39 @@ object TestAsyncExample {
 
     val json     = Source.fromResource("Routing.json").mkString
     val settings = Settings(Map("CustomerService.json" -> "localhost"))
-    serviceCollection.toRouter[String, Customer](json, settings).foreach { router =>
-      val resultFuture1 = router.routeRequest("Иван")
-      println("Awaiting result1.....")
-      val result1 = Await.result(resultFuture1, 60 seconds)
-      println(s"Result1 arrived: $result1")
+    serviceCollection
+      .toRouter[String, Customer](json, settings)
+      .fold(
+        printErrorInfo, { router =>
+          val resultFuture1 = router.routeRequest("Иван")
+          println("Awaiting result1.....")
+          val result1 = Await.result(resultFuture1, 20 seconds)
+          println(s"Result1 arrived: $result1")
 
-      val resultFuture2 = router.routeRequest("12")
-      println("Awaiting result2.....")
-      val result2 = Await.result(resultFuture2, 60 seconds)
-      println(s"Result2 arrived: $result2")
-    }
+          val resultFuture2 = router.routeRequest("12")
+          println("Awaiting result2.....")
+          val result2 = Await.result(resultFuture2, 20 seconds)
+          println(s"Result2 arrived: $result2")
+        }
+      )
   }
 
   def wrapToAsync[A, B](func: A => B): A => Future[B] = { a =>
     Future {
-      Thread.sleep(10000)
+      Thread.sleep(2000)
       func(a)
     }
   }
+
+  @tailrec
+  def printErrorInfo(ex: Throwable): Unit = {
+    println(ex.getClass)
+    println(ex.getMessage)
+    ex.printStackTrace(System.out)
+    if (ex.getCause != null) {
+      println("Caused by: ")
+      printErrorInfo(ex.getCause)
+    }
+  }
+
 }

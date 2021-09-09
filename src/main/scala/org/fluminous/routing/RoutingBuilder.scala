@@ -166,7 +166,7 @@ class RoutingBuilder[F[_]: MonadThrow](builtInServices: Map[String, Service[F]],
     if (!expression.startsWith("${") || !expression.endsWith("}")) {
       Left(ExpressionNotFound(expression))
     } else {
-      parse(expression.substring(2).dropRight(1)).left.map(JqParserError)
+      parse(expression.substring(2).dropRight(1)).left.map(JqParserError(expression, _))
     }
   }
 

@@ -8,10 +8,6 @@
   "functions": [
     {
       "name": "getCustomer",
-      "operation": "CustomerService.json#getCustomer"
-    },
-    {
-      "name": "updateCustomer",
       "operation": "CustomerService.json#updateCustomer"
     }
   ],
@@ -22,42 +18,38 @@
       "actions": [
         {
           "functionRef": {
-            "refName": "getCustomer",
+            "refName": "upper",
             "arguments": {
-              "input": "${.customerId}"
+              "input": "${.}"
             }
           },
           "actionDataFilter": {
-            "toStateData": "${ {prevName: .name, prevAge: .age} }"
-          }
-        },
-        {
-          "functionRef": {
-            "refName": "isEmpty",
-            "arguments": {
-              "input": "${.name}"
-            }
-          },
-          "actionDataFilter": {
-            "toStateData": "${ {isEmptyName: .} }"
-          }
-        },
-        {
-          "functionRef": {
-            "refName": "isEmpty",
-            "arguments": {
-              "input": "${.age}"
-            }
-          },
-          "actionDataFilter": {
-            "toStateData": "${ {isEmptyAge: .} }"
+            "toStateData": "${ {uppercased: .} }"
           }
         }
       ],
-      "transition": "CheckName"
+      "transition": "IsNumber"
     },
     {
-      "name": "CheckName",
+      "name": "IsNumber",
+      "type": "operation",
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "is_number",
+            "arguments": {
+              "input": "${.uppercased}"
+            }
+          },
+          "actionDataFilter": {
+            "toStateData": "${ {isnumber: .} }"
+          }
+        }
+      ],
+      "transition": "CheckNumber"
+    },
+    {
+      "name": "CheckNumber",
       "type": "switch",
       "stateDataFilter": {
         "input": "${.}",
@@ -65,66 +57,78 @@
       },
       "dataConditions": [
         {
-          "condition": "${.isEmptyName}",
-          "transition": "FillName"
+          "condition": "${.isnumber}",
+          "transition": "ToInt"
         }
       ],
       "default": {
-        "transition": "CheckAge"
+        "transition": "GetCustomerByName"
       }
     },
     {
-      "name": "FillName",
+      "name": "ToInt",
       "type": "operation",
       "stateDataFilter": {
-        "input": "${.}",
-        "output": "${ {customerId, isEmptyName, isEmptyAge, name: .prevName, age, prevAge} }"
-      },
-      "transition": "CheckAge"
-    },
-    {
-      "name": "CheckAge",
-      "type": "switch",
-      "stateDataFilter": {
-        "input": "${.}",
-        "output": "${.}"
-      },
-      "dataConditions": [
-        {
-          "condition": "${.isEmptyAge}",
-          "transition": "FillAge"
-        }
-      ],
-      "default": {
-        "transition": "UpdateCustomer"
-      }
-    },
-    {
-      "name": "FillAge",
-      "type": "operation",
-      "stateDataFilter": {
-        "input": "${.}",
-        "output": "${ {customerId, isEmptyName, isEmptyAge, name, age : prevAge} }"
-      },
-      "transition": "UpdateCustomer"
-    },
-    {
-      "name": "UpdateCustomer",
-      "type": "operation",
-      "stateDataFilter": {
-        "input": "${ {customerId, name, age} }",
-        "output": "${name, age}"
+        "input": "${.uppercased}",
+        "output": "${ {age} }"
       },
       "actions": [
         {
           "functionRef": {
-            "refName": "updateCustomer",
+            "refName": "to_int",
             "arguments": {
-              "input": "${customerId, body : {customer: {id : customerId, name, age}} }"
+              "input": "${.}"
             }
           },
           "actionDataFilter": {
-            "toStateData": "${ {response: .} }"
+            "fromStateData": "${.}",
+            "toStateData": "${ {age : .}}"
+          }
+        }
+      ],
+      "transition": "GetCustomerByAge"
+    },
+    {
+      "name": "GetCustomerByName",
+      "type": "operation",
+      "stateDataFilter": {
+        "input": "${.uppercased}",
+        "output": "${ .customer }"
+      },
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "get_customer_by_name",
+            "arguments": {
+              "input": "${.}"
+            }
+          },
+          "actionDataFilter": {
+            "fromStateData": "${.}",
+            "toStateData": "${{customer:.}}"
+          }
+        }
+      ],
+      "end": true
+    },
+    {
+      "name": "GetCustomerByAge",
+      "type": "operation",
+      "stateDataFilter": {
+        "input": "${.age}",
+        "output": "${ .customer }"
+      },
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "get_customer_by_age",
+            "arguments": {
+              "input": "${.}"
+            }
+          },
+          "actionDataFilter": {
+            "fromStateData": "${.}",
+            "toStateData": "${{customer:.}}"
           }
         }
       ],
