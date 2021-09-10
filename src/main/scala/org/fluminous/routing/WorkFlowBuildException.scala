@@ -1,5 +1,6 @@
 package org.fluminous.routing
 
+import cats.data.NonEmptyList
 import org.fluminous.jq.ParserException
 
 sealed abstract class WorkFlowBuildException(message: String, cause: Throwable) extends Exception(message, cause) {
@@ -13,7 +14,7 @@ sealed abstract class WorkFlowBuildException(message: String, cause: Throwable) 
 
 case class ExpressionNotFound(foundExpression: String)
     extends WorkFlowBuildException(
-      s"""Jq expression should start with $${ and end with }, but found: "${foundExpression}""""
+      s"""Jq expression should start with $${ and end with }, but found: "$foundExpression""""
     )
 
 case class JqParserError(expression: String, exception: ParserException)
@@ -22,7 +23,7 @@ case class JqParserError(expression: String, exception: ParserException)
 case class UnsupportedStateType(stateType: String) extends WorkFlowBuildException(s"Unsupported state type: $stateType")
 
 case class ConditionNotFound(stateName: String)
-    extends WorkFlowBuildException(s"Condition in state ${stateName} not found")
+    extends WorkFlowBuildException(s"Condition in state $stateName not found")
 
 case class InitialStateNotFound() extends WorkFlowBuildException("Initial state not found")
 
@@ -57,6 +58,28 @@ final case class ServiceNotFoundException(serviceName: String)
 
 final case class UnsupportedHttpMethod(serviceName: String, method: String)
     extends WorkFlowBuildException(s"Http method $method used for operation $serviceName is unsupported")
+
+final case class InvalidRestPath(serviceName: String, path: String)
+    extends WorkFlowBuildException(s"Invalid path $path for operation: $serviceName")
+
+sealed abstract class ValidationPathFailure(val message: String)
+
+final case class PathParametersAreMissingFromPath(parameterNames: NonEmptyList[String])
+    extends ValidationPathFailure(s"Declared path parameters ${parameterNames.toList.mkString(",")} are missing in path")
+
+final case class PathContainsNotDeclaredParameters(parameterNames: NonEmptyList[String])
+    extends ValidationPathFailure(s"Path parameters ${parameterNames.toList.mkString(",")} are not declared")
+
+final case class PathParametersAreOptional(parameterNames: NonEmptyList[String])
+    extends ValidationPathFailure(s"Path parameters: ${parameterNames.toList.mkString(",")} could not be optional")
+
+final case class PathValidationError(
+  serviceName: String,
+  path: String,
+  validationFailure: NonEmptyList[ValidationPathFailure])
+    extends WorkFlowBuildException(
+      s"Declaration of $serviceName with path $path is invalid: ${validationFailure.map(_.message).toList.mkString("\n")}"
+    )
 
 object WorkFlowBuildException {
   implicit def toEither[A](e: WorkFlowBuildException): Either[WorkFlowBuildException, A] = Left(e)

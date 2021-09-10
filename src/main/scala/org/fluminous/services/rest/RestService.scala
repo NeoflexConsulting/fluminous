@@ -1,40 +1,28 @@
 package org.fluminous.services.rest
 
-import cats.{ Applicative, MonadThrow }
-import cats.data.Validated
-import cats.data.Validated.{ Invalid, Valid }
+import cats.MonadThrow
 import io.circe.Json
-import io.swagger.v3.oas.models.Operation
 import org.fluminous.services.{
   HttpInvocationError,
-  JSONInputParameterType,
+  MultipleBodyParameters,
   ParsingResponseError,
-  RequiredInputParameterIsMissing,
   Service,
-  ServiceException,
-  UnsuccessfulHttpStatusCode,
-  ValidationError,
-  ValidationFailure
+  UnsuccessfulHttpStatusCode
 }
-import sttp.client3.{ basicRequest, Response, UriContext }
+import sttp.client3.{ basicRequest, Response }
 import sttp.model.{ Header, Method, Uri }
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.syntax.traverse._
-import cats.instances.list._
-
-import scala.collection.JavaConverters._
 import io.circe.parser._
-import io.swagger.v3.oas.models.parameters.Parameter
+import org.fluminous.routing.ParameterFunctions
 
 sealed abstract class RestService[F[_]: MonadThrow: HttpBackend](
-  val server: String,
-  val path: String,
   val operationId: String,
-  val substitutablePath: SubstitutablePath[F],
+  val endpointTemplate: EndpointTemplate,
   val headerParameters: List[(String, Boolean)])
-    extends Service[F](operationId) {
-  val monadThrow = MonadThrow[F]
+    extends Service[F](operationId)
+    with ParameterFunctions {
+  private val monadThrow = MonadThrow[F]
   import monadThrow._
 
   final override def invoke(request: Map[String, Json]): F[Json] = {
@@ -47,44 +35,27 @@ sealed abstract class RestService[F[_]: MonadThrow: HttpBackend](
   }
   protected val httpMethod: Method
 
-  private def distributeParameters(request: Map[String, Json]): F[(Uri, Option[Json], List[Header])] = {
+  private def distributeParameters(input: Map[String, Json]): F[(Uri, Option[Json], List[Header])] = {
     for {
-      substitutionResult         <- substitutablePath.getUri(request)
-      (remainingParameters, uri) = substitutionResult
-      validatedParameters        = headerParameters.traverse(validateParameter(remainingParameters))
-      headers                    <- fromValidated(validatedParameters.leftMap(ValidationError(operationId, _)).map(_.flatten))
-    } yield (uri, headers)
+      endpoint         <- fromEither(endpointTemplate.endpoint(input))
+      headerParameters <- fromEither(validateRequiredParameters(operationId, headerParameters, input))
+      headers          = headerParameters.map(p => Header(p._1, p._2))
+      remainingInput   = input.filterKeys(endpointTemplate.usedParameters ++ headerParameters.map(_._1).toSet)
+      body             <- getBody(remainingInput.toList)
+    } yield (endpoint, body, headers)
   }
 
-  private def validateParameter(
-    inputParameters: Map[String, Json]
-  )(
-    validatedParameter: (String, Boolean)
-  ): Validated[List[ValidationFailure], Option[(Map[String, Json], Header)]] = {
-    val name           = validatedParameter._1
-    val isOptional     = validatedParameter._2
-    val inputParameter = inputParameters.get(name)
-    if (inputParameter.isEmpty && !isOptional)
-      Invalid(List(RequiredInputParameterIsMissing(name)))
-    else if (inputParameter.exists(nonPrimitive))
-      Invalid(
-        List(
-          JSONInputParameterType(
-            name,
-            inputParameter.exists(_.isArray),
-            inputParameter.exists(_.isObject),
-            inputParameter.exists(_.isNull)
-          )
-        )
-      )
-    else Valid(inputParameter.map(p => Header(name, p.toString())))
+  private def getBody(input: List[(String, Json)]): F[Option[Json]] = {
+    input match {
+      case Nil         => pure(None)
+      case json :: Nil => pure(Some(json._2))
+      case l @ _       => raiseError(MultipleBodyParameters(operationId, l.map(_._1)))
+    }
   }
-
-  private def nonPrimitive(j: Json): Boolean = j.isArray || j.isObject || j.isNull
 
   private def processResponse(endpoint: Uri, method: Method, response: F[Response[Either[String, String]]]): F[Json] = {
-    handleErrorWith(response) {
-      case e: Throwable => raiseError(HttpInvocationError(operationId, e))
+    handleErrorWith(response) { e =>
+      raiseError(HttpInvocationError(operationId, e))
     }.flatMap(extractBody(endpoint, method)).flatMap(parseToJson(endpoint, method))
   }
 
@@ -102,42 +73,33 @@ sealed abstract class RestService[F[_]: MonadThrow: HttpBackend](
 }
 
 class GetService[F[_]: MonadThrow: HttpBackend](
-  server: String,
-  path: String,
   operationId: String,
-  queryParameters: Seq[Parameter],
-  pathParameters: Seq[Parameter],
-  headerParameters: Seq[Parameter])
-    extends RestService(server, path, operationId, queryParameters, pathParameters, headerParameters) {
+  endpointTemplate: EndpointTemplate,
+  headerParameters: List[(String, Boolean)])
+    extends RestService(operationId, endpointTemplate, headerParameters) {
   protected val httpMethod: Method = Method.GET
 }
 
 class PostService[F[_]: MonadThrow: HttpBackend](
-  server: String,
-  path: String,
   operationId: String,
-  substitutablePath: SubstitutablePath,
-  headerParameters: Seq[Parameter])
-    extends RestService(server, path, operationId, substitutablePath, headerParameters) {
+  endpointTemplate: EndpointTemplate,
+  headerParameters: List[(String, Boolean)])
+    extends RestService(operationId, endpointTemplate, headerParameters) {
   protected val httpMethod: Method = Method.POST
 }
 
 class PutService[F[_]: MonadThrow: HttpBackend](
-  server: String,
-  path: String,
   operationId: String,
-  substitutablePath: SubstitutablePath,
-  headerParameters: Seq[Parameter])
-    extends RestService(server, path, operationId, substitutablePath, headerParameters) {
+  endpointTemplate: EndpointTemplate,
+  headerParameters: List[(String, Boolean)])
+    extends RestService(operationId, endpointTemplate, headerParameters) {
   protected val httpMethod: Method = Method.PUT
 }
 
 class DeleteService[F[_]: MonadThrow: HttpBackend](
-  server: String,
-  path: String,
   operationId: String,
-  substitutablePath: SubstitutablePath,
-  headerParameters: Seq[Parameter])
-    extends RestService(server, path, operationId, substitutablePath, headerParameters) {
+  endpointTemplate: EndpointTemplate,
+  headerParameters: List[(String, Boolean)])
+    extends RestService(operationId, endpointTemplate, headerParameters) {
   protected val httpMethod: Method = Method.DELETE
 }
