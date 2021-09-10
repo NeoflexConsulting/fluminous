@@ -1,0 +1,99 @@
+{
+  "id": "sampleWorkflow",
+  "version": "1.0",
+  "schemaVersion": "0.7",
+  "name": "Sample Workflow",
+  "description": "Sample Workflow",
+  "start": "InitialState",
+  "functions": [
+    {
+      "name": "getCustomer",
+      "operation": "CustomerService.json#getCustomer"
+    },
+    {
+      "name": "updateCustomer",
+      "operation": "CustomerService.json#updateCustomer"
+    }
+  ],
+  "states": [
+    {
+      "name": "InitialState",
+      "type": "operation",
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "getCustomer",
+            "arguments": {
+              "customerId": "${.customerId}"
+            }
+          },
+          "actionDataFilter": {
+            "toStateData": "${ {currentName: .name, currentAge: .age} }"
+          }
+        },
+        {
+          "functionRef": {
+            "refName": "isSame",
+            "arguments": {
+              "input1": "${.age}",
+              "input2": "${.currentAge}"
+            }
+          },
+          "actionDataFilter": {
+            "toStateData": "${ {isSameAge: .} }"
+          }
+        }
+      ],
+      "transition": "CheckAge"
+    },
+    {
+      "name": "CheckAge",
+      "type": "switch",
+      "stateDataFilter": {
+        "input": "${.}",
+        "output": "${{customerId, name: .currentName, age}}"
+      },
+      "dataConditions": [
+        {
+          "condition": "${.isSameAge}",
+          "transition": "SendResponse"
+        }
+      ],
+      "default": {
+        "transition": "UpdateCustomer"
+      }
+    },
+    {
+      "name": "UpdateCustomer",
+      "type": "operation",
+      "stateDataFilter": {
+        "input": "${.}",
+        "output": "${.}"
+      },
+      "actions": [
+        {
+          "functionRef": {
+            "refName": "updateCustomer",
+            "arguments": {
+              "customerId": "${.customerId}",
+              "body": "${ {customer: {id : .customerId, name, age}} }"
+            }
+          },
+          "actionDataFilter": {
+            "toStateData": "${ {response: .} }"
+          }
+        }
+      ],
+      "transition": "SendResponse"
+    },
+    {
+      "name": "SendResponse",
+      "type": "operation",
+      "stateDataFilter": {
+        "input": "${.}",
+        "output": "${{ customer: {name, age}}}"
+      },
+      "end": true
+    }
+  ]
+}
