@@ -37,9 +37,9 @@ trait ParameterFunctions {
     validatedParameter: (String, Boolean)
   ): Validated[List[ValidationServiceFailure], Option[(String, String)]] = {
     val name           = validatedParameter._1
-    val isOptional     = validatedParameter._2
+    val isRequired     = validatedParameter._2
     val inputParameter = inputParameters.get(name)
-    if (inputParameter.isEmpty && !isOptional)
+    if (inputParameter.isEmpty && isRequired)
       Invalid(List(RequiredInputParameterIsMissing(name)))
     else if (inputParameter.exists(nonPrimitive))
       Invalid(

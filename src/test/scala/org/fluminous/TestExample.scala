@@ -25,9 +25,9 @@ object TestExample {
       .fold(
         printErrorInfo, { router =>
           val result1 = router.routeRequest(ChangeAgeRq(123243, 25))
-          println(result1)
+          result1.fold(printErrorInfo, println)
           val result2 = router.routeRequest(ChangeAgeRq(123243, 24))
-          println(result2)
+          result2.fold(printErrorInfo, println)
         }
       )
   }
@@ -52,12 +52,14 @@ object TestExample {
     val settings = Settings(Map("CustomerService.json" -> "localhost"))
     serviceCollection
       .toRouter[String, Customer](json, settings)
-      .fold(printErrorInfo, { router =>
-        val result1 = router.routeRequest("Иван")
-        println(result1)
-        val result2 = router.routeRequest("12")
-        println(result2)
-      })
+      .fold(
+        printErrorInfo, { router =>
+          val result1 = router.routeRequest("Иван")
+          result1.fold(printErrorInfo, println)
+          val result2 = router.routeRequest("12")
+          result2.fold(printErrorInfo, println)
+        }
+      )
   }
 
   @tailrec

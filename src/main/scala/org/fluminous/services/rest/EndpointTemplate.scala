@@ -91,6 +91,6 @@ object EndpointTemplate extends ParameterFunctions {
         }
     }
   }
-  private val startVarSymbol = "{"
-  private val endVarSymbol   = "{"
+  private val startVarSymbol = """\{"""
+  private val endVarSymbol   = """\}"""
 }

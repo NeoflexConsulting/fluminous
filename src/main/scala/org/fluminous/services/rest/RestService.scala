@@ -40,7 +40,8 @@ sealed abstract class RestService[F[_]: MonadThrow: HttpBackend](
       endpoint         <- fromEither(endpointTemplate.endpoint(input))
       headerParameters <- fromEither(validateRequiredParameters(operationId, headerParameters, input))
       headers          = headerParameters.map(p => Header(p._1, p._2))
-      remainingInput   = input.filterKeys(endpointTemplate.usedParameters ++ headerParameters.map(_._1).toSet)
+      usedParameters   = endpointTemplate.usedParameters ++ headerParameters.map(_._1).toSet
+      remainingInput   = input.filterKeys(!usedParameters.contains(_))
       body             <- getBody(remainingInput.toList)
     } yield (endpoint, body, headers)
   }

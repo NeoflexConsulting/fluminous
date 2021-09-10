@@ -24,7 +24,7 @@
           "functionRef": {
             "refName": "getCustomer",
             "arguments": {
-              "input": "${.customerId}"
+              "customerId": "${.customerId}"
             }
           },
           "actionDataFilter": {
