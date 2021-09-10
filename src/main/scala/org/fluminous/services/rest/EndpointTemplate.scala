@@ -3,7 +3,6 @@ package org.fluminous.services.rest
 import io.circe.Json
 import io.swagger.v3.oas.models.parameters.Parameter
 import org.fluminous.routing.{
-  InvalidRestPath,
   ParameterFunctions,
   PathContainsNotDeclaredParameters,
   PathParametersAreMissingFromPath,
@@ -17,8 +16,6 @@ import cats.syntax.list._
 import org.fluminous.services.ValidationServiceError
 import sttp.client3.UriContext
 
-import scala.annotation.tailrec
-
 case class EndpointTemplate private (
   serverName: String,
   operationId: String,
@@ -30,7 +27,7 @@ case class EndpointTemplate private (
     for {
       query           <- validateRequiredParameters(operationId, queryParameters, input).map(_.toMap)
       pathParameters  <- validateRequiredParameters(operationId, pathParameters, input).map(_.toMap)
-      substitutedPath = path.flatMap(_.fold(Some(_), pathParameters.get)).mkString
+      substitutedPath = path.flatMap(_.fold(Some(_), pathParameters.get))
     } yield uri"http://$serverName/$substitutedPath?$query"
   }
   val usedParameters: Set[String] = (path.flatMap(_.right.toOption) ++ queryParameters.map(_._1)).toSet
@@ -46,9 +43,7 @@ object EndpointTemplate extends ParameterFunctions {
     pathParameters: List[Parameter],
     queryParameters: List[Parameter]
   ): Either[WorkFlowBuildException, EndpointTemplate] = {
-
-    parsePath(operationId, path)
-      .flatMap(checkByPath(operationId, pathParameters, path, _))
+    checkByPath(operationId, pathParameters, path, parsePath(path))
       .map(
         EndpointTemplate(
           serverName,
@@ -74,23 +69,18 @@ object EndpointTemplate extends ParameterFunctions {
     ).flatten.toNel.map(PathValidationError(operationId, path, _)).toLeft(parsedPath)
   }
 
-  @tailrec
-  private def parsePath(
-    operationId: String,
-    path: String,
-    readySeq: List[PathItemOrParameter] = List.empty
-  ): Either[InvalidRestPath, List[PathItemOrParameter]] = {
-    path.split(startVarSymbol, 2).toList match {
-      case Nil         => Right(readySeq.reverse)
-      case path :: Nil => Right((Left(path) +: readySeq).reverse)
-      case path :: afterPath :: _ =>
-        afterPath.split(endVarSymbol, 2).toList match {
-          case _ :: Nil => Left(InvalidRestPath(operationId, path))
-          case variable :: afterVariable :: _ =>
-            parsePath(operationId, afterVariable, readySeq :+ Right(variable) :+ Left(path))
-        }
-    }
+  private def parsePath(path: String): List[PathItemOrParameter] = {
+    path
+      .split("/")
+      .filter(_.nonEmpty)
+      .map { pathItem =>
+        if (pathItem.startsWith(startVarSymbol) && pathItem.endsWith(endVarSymbol))
+          Right(pathItem.drop(1).dropRight(1))
+        else
+          Left(pathItem)
+      }
+      .toList
   }
-  private val startVarSymbol = """\{"""
-  private val endVarSymbol   = """\}"""
+  private val startVarSymbol = """{"""
+  private val endVarSymbol   = """}"""
 }

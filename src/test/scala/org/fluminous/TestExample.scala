@@ -19,7 +19,7 @@ object TestExample {
       ServiceCollection[Either[Throwable, *]]()
         .addSyncService[Int, Int, Boolean]("isSame", _ == _, "input1", "input2")
     val json     = Source.fromResource("RESTRouting.json").mkString
-    val settings = Settings(Map("CustomerService.json" -> "localhost"))
+    val settings = Settings(Map("CustomerService.json" -> "localhost:8080"))
     serviceCollection
       .toRouter[ChangeAgeRq, ChangeAgeRs](json, settings)
       .fold(
@@ -49,7 +49,7 @@ object TestExample {
         .addSyncService[String, Boolean]("is_number", _.forall(_.isDigit), "input")
 
     val json     = Source.fromResource("Routing.json").mkString
-    val settings = Settings(Map("CustomerService.json" -> "localhost"))
+    val settings = Settings(Map("CustomerService.json" -> "localhost:8080"))
     serviceCollection
       .toRouter[String, Customer](json, settings)
       .fold(

@@ -59,9 +59,6 @@ final case class ServiceNotFoundException(serviceName: String)
 final case class UnsupportedHttpMethod(serviceName: String, method: String)
     extends WorkFlowBuildException(s"Http method $method used for operation $serviceName is unsupported")
 
-final case class InvalidRestPath(serviceName: String, path: String)
-    extends WorkFlowBuildException(s"Invalid path $path for operation: $serviceName")
-
 sealed abstract class ValidationPathFailure(val message: String)
 
 final case class PathParametersAreMissingFromPath(parameterNames: NonEmptyList[String])
