@@ -5,19 +5,18 @@ import io.circe.Json.{ fromJsonObject, fromValues }
 import io.circe.{ Json, JsonObject }
 import org.fluminous.jq.filter.Filter
 import cats.syntax.flatMap._
+import cats.syntax.foldable._
 import cats.syntax.functor._
-import cats.syntax.traverse._
 
 final case class OperationExecutor[F[_]: MonadThrow](stateName: String, inputFilter: Filter, outputFilter: Filter) {
   private val monadError = MonadThrow[F]
   import monadError._
   def execute(actions: List[Json => F[Option[Json]]], nextStep: Json => F[Json])(input: Json): F[Json] = {
     for {
-      stateJson     <- fromOption(inputFilter.transform(input), InputStateFilterEvaluatedToNull(stateName))
-      actionResults <- actions.traverse(f => f(stateJson))
-      mergedJson    = actionResults.flatten.foldLeft(stateJson)(merge)
-      updatedJson   <- fromOption(outputFilter.transform(mergedJson), OutputStateFilterEvaluatedToNull(stateName))
-      result        <- nextStep(updatedJson)
+      stateJson   <- fromOption(inputFilter.transform(input), InputStateFilterEvaluatedToNull(stateName))
+      mergedJson  <- actions.foldM(stateJson) { case (js, a) => a(js).map(_.map(merge(_, js)).getOrElse(js)) }
+      updatedJson <- fromOption(outputFilter.transform(mergedJson), OutputStateFilterEvaluatedToNull(stateName))
+      result      <- nextStep(updatedJson)
     } yield result
   }
 
