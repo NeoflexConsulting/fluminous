@@ -91,7 +91,7 @@
       "type": "operation",
       "stateDataFilter": {
         "input": "${.}",
-        "output": "${{name, age}}"
+        "output": "${{ customer: {name, age}}}"
       },
       "end": true
     }

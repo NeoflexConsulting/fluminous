@@ -1,7 +1,7 @@
 package org.fluminous.services.rest
 
-import cats.effect.{ ExitCode, IO, IOApp }
-import org.fluminous.services.rest.model.Customer
+import cats.effect.{ExitCode, IO, IOApp}
+import org.fluminous.services.rest.model.{Customer, UpdateCustomerRq}
 import org.http4s._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.dsl.io._
@@ -26,7 +26,7 @@ trait TestServerT extends IOApp.Simple {
 
         case req @ PUT -> Root / "customers" / IntVar(customerId) =>
           for {
-            customer <- req.as[Customer]
+            customer <- req.as[UpdateCustomerRq]
             _        <- logger.warn(s"UpdateCustomer for customerId: $customerId with customer: $customer")
             resp     <- Ok()
           } yield resp

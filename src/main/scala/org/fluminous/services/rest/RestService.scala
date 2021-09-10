@@ -11,8 +11,10 @@ import org.fluminous.services.{
 }
 import sttp.client3.{ basicRequest, Response }
 import sttp.model.{ Header, Method, Uri }
+import sttp.client3.circe._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import io.circe.Json.Null
 import io.circe.parser._
 import org.fluminous.routing.ParameterFunctions
 
@@ -28,7 +30,7 @@ sealed abstract class RestService[F[_]: MonadThrow: HttpBackend](
   final override def invoke(request: Map[String, Json]): F[Json] = {
     distributeParameters(request).flatMap {
       case (uri, body, headers) =>
-        val requestWithBody    = body.map(b => basicRequest.body(b.toString)).getOrElse(basicRequest)
+        val requestWithBody    = body.map(b => basicRequest.body(b)).getOrElse(basicRequest)
         val requestWithHeaders = headers.foldLeft(requestWithBody)(_.header(_))
         processResponse(uri, httpMethod, requestWithHeaders.method(httpMethod, uri).send(HttpBackend[F].backend))
     }
@@ -69,7 +71,11 @@ sealed abstract class RestService[F[_]: MonadThrow: HttpBackend](
   }
 
   private def parseToJson(url: Uri, method: Method)(text: String): F[Json] = {
-    fromEither(parse(text).left.map(ParsingResponseError(operationId, url.toString, method.toString(), _)))
+    if (text.trim.nonEmpty) {
+      fromEither(parse(text).left.map(ParsingResponseError(operationId, url.toString, method.toString(), _)))
+    } else {
+      pure(Null)
+    }
   }
 }
 

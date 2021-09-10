@@ -10,6 +10,7 @@ libraryDependencies ++= Seq(
   "io.swagger.parser.v3"          % "swagger-parser"         % "2.0.27",
   "com.softwaremill.sttp.client3" %% "core"                  % "3.3.14",
   "com.softwaremill.sttp.client3" %% "okhttp-backend"        % "3.3.14",
+  "com.softwaremill.sttp.client3" %% "circe"                 % "3.3.14",
   "org.slf4j"                     % "slf4j-api"              % "1.7.32"
 ) ++ Seq(
   "io.circe" %% "circe-core",
