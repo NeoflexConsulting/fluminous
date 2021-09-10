@@ -8,13 +8,12 @@ import scala.io.Source
 
 object TestExample {
   def main(args: Array[String]): Unit = {
-    //testRouting
+    testRouting
     testRestRouting
   }
 
   private def testRestRouting = {
     import io.circe.generic.auto._
-    //Filling service collection
     val serviceCollection =
       ServiceCollection[Either[Throwable, *]]()
         .addSyncService[Int, Int, Boolean]("isSame", _ == _, "input1", "input2")
@@ -34,7 +33,6 @@ object TestExample {
 
   private def testRouting = {
     import io.circe.generic.auto._
-    //Filling service collection
     val serviceCollection =
       ServiceCollection[Either[Throwable, *]]()
         .addSyncService[String, String]("upper", _.toUpperCase, "input")

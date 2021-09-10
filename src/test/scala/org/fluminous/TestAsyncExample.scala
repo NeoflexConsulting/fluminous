@@ -12,10 +12,10 @@ import scala.io.Source
 object TestAsyncExample {
   def main(args: Array[String]): Unit = {
     testRouting
+    testRestRouting
   }
   private def testRestRouting = {
     import io.circe.generic.auto._
-    //Filling service collection
     val serviceCollection =
       ServiceCollection[Future]()
         .addSyncService[Int, Int, Boolean]("isSame", _ == _, "input1", "input2")
