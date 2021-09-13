@@ -11,6 +11,4 @@ final case class Selector(path: Seq[String]) extends Filter {
       }
     }
   }
-
-  override def toString: String = path.mkString(".", "|", "")
 }
