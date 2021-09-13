@@ -33,7 +33,7 @@ trait Parser {
       case (filter: Filter) :: Nil =>
         Right(filter)
       case expr1 :: _ =>
-        Left(ParserException(tokenizer.input.position, s"Invalid input: $expr1"))
+        Left(ParserException(tokenizer.input.position, s"Invalid input: '$expr1'"))
     }
   }
 

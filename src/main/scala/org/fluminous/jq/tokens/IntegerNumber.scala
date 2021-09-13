@@ -22,4 +22,5 @@ case class IntegerNumber(value: String) extends Token {
     }
   }
   def asInt: Int = value.toInt
+  override def toString: String = value
 }

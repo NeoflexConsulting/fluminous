@@ -14,4 +14,5 @@ case object RecursiveDescent extends Token {
         Left(ParserException(position, s"""Invalid sequence "..$c""""))
     }
   }
+  override def toString: String = raw"""\\"""
 }

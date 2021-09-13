@@ -14,4 +14,5 @@ case class Identifier(value: String) extends Token {
         Right(Some(Identifier(value :+ c)))
     }
   }
+  override def toString: String = value
 }

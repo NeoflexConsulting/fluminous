@@ -1,6 +1,6 @@
 package org.fluminous.jq.tokens
 
-import org.fluminous.jq.{ParserException, input}
+import org.fluminous.jq.{ input, ParserException }
 
 sealed trait SpecialSymbol extends BasicToken {
   override val char: Char

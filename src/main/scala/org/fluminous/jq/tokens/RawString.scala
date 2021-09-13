@@ -15,4 +15,5 @@ case class RawString(value: String, finished: Boolean = true) extends Token {
       }
     }
   }
+  override def toString: String = s""""$value""""
 }
