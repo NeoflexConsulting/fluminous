@@ -4,7 +4,7 @@ import org.fluminous.jq.Expression
 
 trait ExpressionPattern {
   def instantiateOnStack(stack: List[Expression]): Option[List[Expression]] = ExpressionCases.lift(stack)
-  protected val ExpressionCases: PartialFunction[List[Expression], List[Expression]]
+  protected val ExpressionCases: Seq[PatternCase]
 }
 
 object ExpressionPattern {

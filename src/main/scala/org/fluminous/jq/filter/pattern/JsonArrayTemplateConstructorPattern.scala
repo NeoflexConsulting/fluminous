@@ -2,11 +2,11 @@ package org.fluminous.jq.filter.pattern
 
 import io.circe.Json
 import org.fluminous.jq.Expression
-import org.fluminous.jq.filter.{JsonArrayTemplate, JsonArrayTemplateConstructor, JsonObjectTemplate, Selector}
-import org.fluminous.jq.tokens.{Comma, DecimalNumber, IntegerNumber, LeftSquareBracket, RawString, Root}
+import org.fluminous.jq.filter.{ JsonArrayTemplate, JsonArrayTemplateConstructor, JsonObjectTemplate, Selector }
+import org.fluminous.jq.tokens.{ Comma, DecimalNumber, IntegerNumber, LeftSquareBracket, RawString, Root }
 
 case object JsonArrayTemplateConstructorPattern extends ExpressionPattern {
-  override val ExpressionCases: PartialFunction[List[Expression], List[Expression]] = {
+  override val ExpressionCases: Seq[PatternCase] = {
     case Comma :: (s @ Selector(_)) :: LeftSquareBracket :: rest =>
       JsonArrayTemplateConstructor(Seq(Right(s))) :: rest
     case Comma :: Root :: LeftSquareBracket :: rest =>
