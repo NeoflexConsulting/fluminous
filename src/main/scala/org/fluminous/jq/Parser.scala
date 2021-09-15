@@ -1,6 +1,6 @@
 package org.fluminous.jq
 
-import org.fluminous.jq.Expression
+import cats.data.NonEmptyList
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.pattern.ExpressionPattern
 import org.fluminous.jq.input.InputProvider
@@ -9,11 +9,11 @@ import org.fluminous.jq.tokens.Token
 import scala.annotation.tailrec
 import cats.syntax.foldable._
 import cats.instances.list._
-import org.slf4j.{ Logger, LoggerFactory }
+import org.slf4j.LoggerFactory
 
 trait Parser {
   private val logger = LoggerFactory.getLogger(getClass)
-  type Stack = List[Expression]
+  type Stack = List[org.fluminous.jq.Expression]
   def parse(input: InputProvider): Either[ParserException, Filter] = {
     parse(Tokenizer(input))
   }
@@ -42,20 +42,24 @@ trait Parser {
 
   private def applyTokenToStack(token: Token, stack: Stack): Stack = {
     import ExpressionPattern._
-    val newStack = token +: stack
+    val newStack = NonEmptyList(token, stack)
     logger.debug(printStack(newStack))
-    patterns.foldMapK(_.instantiateOnStack(newStack)).map(foldStack).getOrElse(newStack)
+    patterns.foldMapK(_.instantiateOnStack(newStack)).map(foldStack).getOrElse(newStack.toList)
   }
 
   @tailrec
   private def foldStack(stack: Stack): Stack = {
     logger.debug(printStack(stack))
     import ExpressionPattern._
-    patterns.foldMapK(_.instantiateOnStack(stack)) match {
+    val updatedStack = NonEmptyList.fromList(stack).flatMap { nonEmptyStack =>
+      patterns.foldMapK(_.instantiateOnStack(nonEmptyStack))
+    }
+    updatedStack match {
       case None           => stack
       case Some(newStack) => foldStack(newStack)
     }
   }
 
-  private def printStack(stack: List[Expression]): String = stack.mkString("Stack: ", ",", "")
+  private def printStack(stack: NonEmptyList[Expression]): String = stack.toList.mkString("Stack: ", ",", "")
+  private def printStack(stack: List[Expression]): String         = stack.mkString("Stack: ", ",", "")
 }

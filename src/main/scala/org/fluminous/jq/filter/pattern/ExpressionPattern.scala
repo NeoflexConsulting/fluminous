@@ -1,10 +1,16 @@
 package org.fluminous.jq.filter.pattern
 
+import cats.data.NonEmptyList
 import org.fluminous.jq.Expression
+import org.fluminous.jq.filter.pattern.dsl.InconsistencyMeasure
+import cats.syntax.foldable._
 
 trait ExpressionPattern {
-  def instantiateOnStack(stack: List[Expression]): Option[List[Expression]] = ExpressionCases.lift(stack)
-  protected val ExpressionCases: Seq[PatternCase]
+  type PatternCase = NonEmptyList[Expression] => Either[InconsistencyMeasure, List[Expression]]
+  def instantiateOnStack(stack: NonEmptyList[Expression]): Option[List[Expression]] =
+    ExpressionCases.foldMapK(f => f(stack).toOption)
+
+  protected val ExpressionCases: List[PatternCase]
 }
 
 object ExpressionPattern {

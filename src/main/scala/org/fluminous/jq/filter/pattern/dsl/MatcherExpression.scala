@@ -1,7 +1,7 @@
 package org.fluminous.jq.filter.pattern.dsl
 
 import cats.data.NonEmptyList
-import org.fluminous.jq.filter.pattern.ExpressionPattern
+import org.fluminous.jq.Expression
 import shapeless.{ HList, HNil }
 
 import scala.reflect.ClassTag
@@ -12,8 +12,10 @@ sealed trait InconsistencyMeasure {
 
 case class InconsistencyNumber(number: Int) extends InconsistencyMeasure {
   override def +(r: InconsistencyMeasure): InconsistencyMeasure = {
-    case InconsistencyNumber(ir) => InconsistencyNumber(number + ir)
-    case _                       => Infinite
+    r match {
+      case InconsistencyNumber(ir) => InconsistencyNumber(number + ir)
+      case _                       => Infinite
+    }
   }
 }
 
@@ -21,100 +23,101 @@ case object Infinite extends InconsistencyMeasure {
   override def +(r: InconsistencyMeasure): InconsistencyMeasure = this
 }
 
-trait Matcher {
-  def stackMatches(
-    builder: expression.Captured => List[ExpressionPattern]
-  )(
-    input: NonEmptyList[ExpressionPattern]
-  ): Either[InconsistencyMeasure, List[ExpressionPattern]] = {
-    expression.stackMatches(input).map(builder) match {
-      case Left(i)  => Left(i)
-      case Right(r) =>input.toList.drop()
+trait MatcherExpression[Captured <: HList] {
+  def ifValidReplaceBy(
+    builder: Captured => List[Expression]
+  ): NonEmptyList[Expression] => Either[InconsistencyMeasure, List[Expression]] = { input =>
+    stackMatches(input).map { case (stack, captured) => builder(captured) ++ stack }
+  }
+  def ->:[E <: Expression](
+    left: CapturedMatcherExpression[E]
+  ): CompositeCapturedMatcherExpression[Captured, E, CapturedMatcherExpression[E]] =
+    new CompositeCapturedMatcherExpression[Captured, E, CapturedMatcherExpression[E]](left, this)
+
+  def ->:[E <: Expression](
+    left: IsMatcherExpression[E]
+  ): CompositeIsMatcherExpression[Captured, E, IsMatcherExpression[E]] =
+    new CompositeIsMatcherExpression[Captured, E, IsMatcherExpression[E]](left, this)
+
+  def stackMatches(input: NonEmptyList[Expression]): Either[InconsistencyMeasure, (List[Expression], Captured)]
+}
+
+trait PrimitiveMatcherExpression[E <: Expression, Captured <: HList] extends MatcherExpression[Captured]
+
+final class CompositeCapturedMatcherExpression[
+  RightCaptured <: HList,
+  E <: Expression,
+  M <: CapturedMatcherExpression[E]
+](
+  left: M,
+  right: MatcherExpression[RightCaptured])
+    extends MatcherExpression[shapeless.::[E, RightCaptured]] {
+  override def stackMatches(
+    input: NonEmptyList[Expression]
+  ): Either[InconsistencyMeasure, (List[Expression], shapeless.::[E, RightCaptured])] = {
+    val leftResult  = left.stackMatches(input)
+    val rightResult = NonEmptyList.fromList(input.tail).map(right.stackMatches(_)).getOrElse(Left(Infinite))
+    (leftResult, rightResult) match {
+      case (Left(i), Right(_)) => Left(i)
+      case (Right((_, capturedL)), Right((stack, capturedR))) =>
+        Right((stack, shapeless.::(capturedL.head, capturedR)))
+      case (Right(_), Left(_))  => Left(Infinite)
+      case (Left(il), Left(ir)) => Left(il + ir)
     }
   }
-  protected val expression: MatcherExpression
 }
 
-trait MatcherExpression {
-  type Captured <: HList
-  def stackMatches(input: NonEmptyList[ExpressionPattern]): Either[InconsistencyMeasure, Captured]
-}
+final class CompositeIsMatcherExpression[RightCaptured <: HList, E <: Expression, M <: IsMatcherExpression[E]](
+  left: M,
+  right: MatcherExpression[RightCaptured])
+    extends MatcherExpression[RightCaptured] {
 
-trait PrimitiveMatcherExpression extends MatcherExpression {
-  def where(condition: Captured => Boolean): MatcherExpression = {
-    val outer = this
-    new MatcherExpression {
-      type Captured = outer.Captured
-      override def stackMatches(input: NonEmptyList[ExpressionPattern]): Either[InconsistencyMeasure, Captured] = {
-        outer.stackMatches(input).flatMap { captured =>
-          if (condition(captured)) {
-            Right(captured)
-          } else {
-            Left(InconsistencyNumber(1))
-          }
-        }
-      }
+  override def stackMatches(
+    input: NonEmptyList[Expression]
+  ): Either[InconsistencyMeasure, (List[Expression], RightCaptured)] = {
+    val leftResult  = left.stackMatches(input)
+    val rightResult = NonEmptyList.fromList(input.tail).map(right.stackMatches(_)).getOrElse(Left(Infinite))
+    (leftResult, rightResult) match {
+      case (Left(i), Right(_))         => Left(i)
+      case (Right(_), Right(captured)) => Right(captured)
+      case (Right(_), Left(_))         => Left(Infinite)
+      case (Left(il), Left(ir))        => Left(il + ir)
     }
   }
 }
 
-trait IsMatcherExpression extends PrimitiveMatcherExpression {
-  override type Captured = HNil
+final class IsMatcherExpression[E <: Expression: ClassTag](condition: E => Boolean)
+    extends PrimitiveMatcherExpression[E, HNil] {
+  private val clazz = implicitly[ClassTag[E]].runtimeClass
+  override def stackMatches(input: NonEmptyList[Expression]): Either[InconsistencyMeasure, (List[Expression], HNil)] = {
+    input match {
+      case NonEmptyList(head: E, tail) if clazz.isInstance(head) && condition(head) => Right((tail, HNil))
+      case _                                                                        => Left(InconsistencyNumber(1))
+    }
+  }
 }
 
-trait CapturedMatcherExpression extends PrimitiveMatcherExpression {
-  type CapturedPrimitive
-  override type Captured = shapeless.::[CapturedPrimitive, HNil]
+final class CapturedMatcherExpression[E <: Expression: ClassTag](condition: E => Boolean)
+    extends PrimitiveMatcherExpression[E, shapeless.::[E, HNil]] {
+  private val clazz = implicitly[ClassTag[E]].runtimeClass
+  override def stackMatches(
+    input: NonEmptyList[Expression]
+  ): Either[InconsistencyMeasure, (List[Expression], shapeless.::[E, HNil])] = {
+    input match {
+      case NonEmptyList(head: E, tail) if clazz.isInstance(head) && condition(head) => Right((tail, head :: HNil))
+      case _                                                                        => Left(InconsistencyNumber(1))
+    }
+  }
 }
 
 object MatcherExpression {
-  def is[T <: ExpressionPattern: ClassTag]: IsMatcherExpression = new IsMatcherExpression {
-    private val clazz = implicitly[ClassTag[T]].runtimeClass
-    override def stackMatches(input: NonEmptyList[ExpressionPattern]): Either[InconsistencyMeasure, Captured] = {
-      input match {
-        case NonEmptyList(head: T, _) if clazz.isInstance(head) => Right(HNil)
-        case _                                                  => Left(InconsistencyNumber(1))
-      }
-    }
-  }
+  def check[T <: Expression: ClassTag]: IsMatcherExpression[T] = checkIf[T](_ => true)
 
-  def capture[T <: ExpressionPattern: ClassTag]: CapturedMatcherExpression = new CapturedMatcherExpression {
-    private val clazz = implicitly[ClassTag[T]].runtimeClass
-    type CapturedPrimitive = T
-    override def stackMatches(input: NonEmptyList[ExpressionPattern]): Either[InconsistencyMeasure, Captured] = {
-      input match {
-        case NonEmptyList(head: T, _) if clazz.isInstance(head) => Right(head :: HNil)
-        case _                                                  => Left(InconsistencyNumber(1))
-      }
-    }
-  }
+  def checkIf[T <: Expression: ClassTag](condition: T => Boolean): IsMatcherExpression[T] =
+    new IsMatcherExpression[T](condition)
 
-  def ::(left: IsMatcherExpression, right: MatcherExpression): MatcherExpression = new MatcherExpression {
-    type Captured = right.Captured
-    override def stackMatches(input: NonEmptyList[ExpressionPattern]): Either[InconsistencyMeasure, Captured] = {
-      val leftResult  = left.stackMatches(input)
-      val rightResult = NonEmptyList.fromList(input.tail).map(right.stackMatches(_)).getOrElse(Left(Infinite))
-      (leftResult, rightResult) match {
-        case (Left(i), Right(_))         => Left(i)
-        case (Right(_), Right(captured)) => Right(captured)
-        case (Right(_), Left(_))         => Left(Infinite)
-        case (Left(il), Left(ir))        => Left(il + ir)
-      }
-    }
-  }
+  def capture[T <: Expression: ClassTag]: CapturedMatcherExpression[T] = captureIf[T](_ => true)
 
-  def ::(left: CapturedMatcherExpression, right: MatcherExpression): MatcherExpression = new MatcherExpression {
-    type Captured = shapeless.::[left.CapturedPrimitive, right.Captured]
-    override def stackMatches(input: NonEmptyList[ExpressionPattern]): Either[InconsistencyMeasure, Captured] = {
-      val leftResult  = left.stackMatches(input)
-      val rightResult = NonEmptyList.fromList(input.tail).map(right.stackMatches(_)).getOrElse(Left(Infinite))
-      (leftResult, rightResult) match {
-        case (Left(i), Right(_))                  => Left(i)
-        case (Right(capturedL), Right(capturedR)) => Right(shapeless.::(capturedL.head, capturedR))
-        case (Right(_), Left(_))                  => Left(Infinite)
-        case (Left(il), Left(ir))                 => Left(il + ir)
-      }
-    }
-  }
-
+  def captureIf[T <: Expression: ClassTag](condition: T => Boolean): CapturedMatcherExpression[T] =
+    new CapturedMatcherExpression[T](condition)
 }

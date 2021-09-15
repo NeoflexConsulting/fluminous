@@ -1,41 +1,55 @@
 package org.fluminous.jq.filter.pattern
 
 import io.circe.Json
-import org.fluminous.jq.Expression
+import org.fluminous.jq.filter.pattern.dsl.MatcherExpression.{ capture, check }
 import org.fluminous.jq.filter.{ JsonArrayTemplate, JsonArrayTemplateConstructor, JsonObjectTemplate, Selector }
 import org.fluminous.jq.tokens.{ Comma, DecimalNumber, IntegerNumber, LeftSquareBracket, RawString, Root }
+import shapeless.HNil
+import shapeless.::
 
 case object JsonArrayTemplateConstructorPattern extends ExpressionPattern {
-  override val ExpressionCases: Seq[PatternCase] = {
-    case Comma :: (s @ Selector(_)) :: LeftSquareBracket :: rest =>
-      JsonArrayTemplateConstructor(Seq(Right(s))) :: rest
-    case Comma :: Root :: LeftSquareBracket :: rest =>
-      JsonArrayTemplateConstructor(Seq(Right(Root))) :: rest
-    case Comma :: RawString(value, _) :: LeftSquareBracket :: rest =>
-      JsonArrayTemplateConstructor(Seq(Left(Json.fromString(value)))) :: rest
-    case Comma :: (value @ IntegerNumber(_)) :: LeftSquareBracket :: rest =>
-      JsonArrayTemplateConstructor(Seq(Left(Json.fromInt(value.asInt)))) :: rest
-    case Comma :: (value @ DecimalNumber(_)) :: LeftSquareBracket :: rest =>
-      JsonArrayTemplateConstructor(Seq(Left(Json.fromBigDecimal(value.asDecimal)))) :: rest
-    case Comma :: (filter @ JsonObjectTemplate(_)) :: LeftSquareBracket :: rest =>
-      JsonArrayTemplateConstructor(Seq(Right(filter))) :: rest
-    case Comma :: (filter @ JsonArrayTemplate(_)) :: LeftSquareBracket :: rest =>
-      JsonArrayTemplateConstructor(Seq(Right(filter))) :: rest
-
-    case Comma :: (s @ Selector(_)) :: JsonArrayTemplateConstructor(seq) :: rest =>
-      JsonArrayTemplateConstructor(Right(s) +: seq) :: rest
-    case Comma :: Root :: JsonArrayTemplateConstructor(seq) :: rest =>
-      JsonArrayTemplateConstructor(Right(Root) +: seq) :: rest
-    case Comma :: RawString(value, _) :: JsonArrayTemplateConstructor(seq) :: rest =>
-      JsonArrayTemplateConstructor(Left(Json.fromString(value)) +: seq) :: rest
-    case Comma :: (value @ IntegerNumber(_)) :: JsonArrayTemplateConstructor(seq) :: rest =>
-      JsonArrayTemplateConstructor(Left(Json.fromInt(value.asInt)) +: seq) :: rest
-    case Comma :: (value @ DecimalNumber(_)) :: JsonArrayTemplateConstructor(seq) :: rest =>
-      JsonArrayTemplateConstructor(Left(Json.fromBigDecimal(value.asDecimal)) +: seq) :: rest
-    case Comma :: (filter @ JsonObjectTemplate(_)) :: JsonArrayTemplateConstructor(seq) :: rest =>
-      JsonArrayTemplateConstructor(Right(filter) +: seq) :: rest
-    case Comma :: (filter @ JsonArrayTemplate(_)) :: JsonArrayTemplateConstructor(seq) :: rest =>
-      JsonArrayTemplateConstructor(Right(filter) +: seq) :: rest
-
-  }
+  override val ExpressionCases: List[PatternCase] = List(
+    (check[Comma] ->: capture[Selector] ->: check[LeftSquareBracket]).ifValidReplaceBy {
+      case s :: HNil => List(JsonArrayTemplateConstructor(Seq(Right(s))))
+    },
+    (check[Comma] ->: check[Root] ->: check[LeftSquareBracket]).ifValidReplaceBy {
+      case HNil => List(JsonArrayTemplateConstructor(Seq(Right(Root))))
+    },
+    (check[Comma] ->: capture[RawString] ->: check[LeftSquareBracket]).ifValidReplaceBy {
+      case s :: HNil => List(JsonArrayTemplateConstructor(Seq(Left(Json.fromString(s.value)))))
+    },
+    (check[Comma] ->: capture[IntegerNumber] ->: check[LeftSquareBracket]).ifValidReplaceBy {
+      case i :: HNil => List(JsonArrayTemplateConstructor(Seq(Left(Json.fromInt(i.asInt)))))
+    },
+    (check[Comma] ->: capture[DecimalNumber] ->: check[LeftSquareBracket]).ifValidReplaceBy {
+      case n :: HNil => List(JsonArrayTemplateConstructor(Seq(Left(Json.fromBigDecimal(n.asDecimal)))))
+    },
+    (check[Comma] ->: capture[JsonObjectTemplate] ->: check[LeftSquareBracket]).ifValidReplaceBy {
+      case filter :: HNil => List(JsonArrayTemplateConstructor(Seq(Right(filter))))
+    },
+    (check[Comma] ->: capture[JsonArrayTemplate] ->: check[LeftSquareBracket]).ifValidReplaceBy {
+      case filter :: HNil => List(JsonArrayTemplateConstructor(Seq(Right(filter))))
+    },
+    (check[Comma] ->: capture[Selector] ->: capture[JsonArrayTemplateConstructor]).ifValidReplaceBy {
+      case s :: js :: HNil => List(JsonArrayTemplateConstructor(Right(s) +: js.values))
+    },
+    (check[Comma] ->: check[Root] ->: capture[JsonArrayTemplateConstructor]).ifValidReplaceBy {
+      case js :: HNil => List(JsonArrayTemplateConstructor(Right(Root) +: js.values))
+    },
+    (check[Comma] ->: capture[RawString] ->: capture[JsonArrayTemplateConstructor]).ifValidReplaceBy {
+      case s :: js :: HNil => List(JsonArrayTemplateConstructor(Left(Json.fromString(s.value)) +: js.values))
+    },
+    (check[Comma] ->: capture[IntegerNumber] ->: capture[JsonArrayTemplateConstructor]).ifValidReplaceBy {
+      case i :: js :: HNil => List(JsonArrayTemplateConstructor(Left(Json.fromInt(i.asInt)) +: js.values))
+    },
+    (check[Comma] ->: capture[DecimalNumber] ->: capture[JsonArrayTemplateConstructor]).ifValidReplaceBy {
+      case n :: js :: HNil => List(JsonArrayTemplateConstructor(Left(Json.fromBigDecimal(n.asDecimal)) +: js.values))
+    },
+    (check[Comma] ->: capture[JsonObjectTemplate] ->: capture[JsonArrayTemplateConstructor]).ifValidReplaceBy {
+      case filter :: js :: HNil => List(JsonArrayTemplateConstructor(Right(filter) +: js.values))
+    },
+    (check[Comma] ->: capture[JsonArrayTemplate] ->: capture[JsonArrayTemplateConstructor]).ifValidReplaceBy {
+      case filter :: js :: HNil => List(JsonArrayTemplateConstructor(Right(filter) +: js.values))
+    }
+  )
 }

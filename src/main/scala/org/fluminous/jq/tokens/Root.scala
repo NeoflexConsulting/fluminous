@@ -5,7 +5,9 @@ import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{ input, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 
-case object Root extends BasicToken with Filter {
+trait Root extends BasicToken with Filter
+
+case object Root extends Root {
   override val char = '.'
   def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, Option[Token]] = {
     symbol match {

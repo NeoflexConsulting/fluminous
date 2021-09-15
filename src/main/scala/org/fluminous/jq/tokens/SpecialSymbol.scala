@@ -21,14 +21,23 @@ object SpecialSymbol {
     Comma
   ).map(s => (s.char, s)).toMap
 }
-
-case object Pipe               extends SpecialSymbol { val char = '|' }
-case object LeftBracket        extends SpecialSymbol { val char = '(' }
-case object RightBracket       extends SpecialSymbol { val char = ')' }
-case object LeftSquareBracket  extends SpecialSymbol { val char = '[' }
-case object RightSquareBracket extends SpecialSymbol { val char = ']' }
-case object LeftFigureBracket  extends SpecialSymbol { val char = '{' }
-case object RightFigureBracket extends SpecialSymbol { val char = '}' }
-case object Colon              extends SpecialSymbol { val char = ':' }
-case object OptionalSign       extends SpecialSymbol { val char = '?' }
-case object Comma              extends SpecialSymbol { val char = ',' }
+trait Pipe                     extends SpecialSymbol { val char = '|' }
+case object Pipe               extends Pipe
+trait LeftBracket              extends SpecialSymbol { val char = '(' }
+case object LeftBracket        extends LeftBracket
+trait RightBracket             extends SpecialSymbol { val char = ')' }
+case object RightBracket       extends RightBracket
+trait LeftSquareBracket        extends SpecialSymbol { val char = '[' }
+case object LeftSquareBracket  extends LeftSquareBracket
+trait RightSquareBracket       extends SpecialSymbol { val char = ']' }
+case object RightSquareBracket extends RightSquareBracket
+trait LeftFigureBracket        extends SpecialSymbol { val char = '{' }
+case object LeftFigureBracket  extends LeftFigureBracket
+trait RightFigureBracket       extends SpecialSymbol { val char = '}' }
+case object RightFigureBracket extends RightFigureBracket
+trait Colon                    extends SpecialSymbol { val char = ':' }
+case object Colon              extends Colon
+trait OptionalSign             extends SpecialSymbol { val char = '?' }
+case object OptionalSign       extends OptionalSign
+trait Comma                    extends SpecialSymbol { val char = ',' }
+case object Comma              extends Comma
