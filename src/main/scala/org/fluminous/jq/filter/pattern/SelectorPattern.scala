@@ -16,10 +16,10 @@ case object SelectorPattern extends ExpressionPattern {
       case s :: HNil => List(Selector(Seq(s.value)))
     },
     (capture[Selector] ->: capture[Selector]).ifValidReplaceBy {
-      case s1 :: s2 :: HNil => List(Selector(s1.path ++ s2.path))
+      case s1 :: s2 :: HNil => List(Selector(s2.path ++ s1.path))
     },
     (capture[Selector] ->: check[Pipe] ->: capture[Selector]).ifValidReplaceBy {
-      case s1 :: s2 :: HNil => List(Selector(s1.path ++ s2.path))
+      case s1 :: s2 :: HNil => List(Selector(s2.path ++ s1.path))
     }
   )
 }
