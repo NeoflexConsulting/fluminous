@@ -15,6 +15,6 @@ case class JsonObjectTemplate(values: Map[String, Either[Json, Filter]]) extends
 
 object JsonObjectTemplate {
   implicit def typeDescription: Description[JsonObjectTemplate] = new Description[JsonObjectTemplate] {
-    override val description: String = "json object"
+    override val description: String = "end of json object"
   }
 }

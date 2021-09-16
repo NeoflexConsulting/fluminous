@@ -8,7 +8,7 @@ import shapeless.{ ::, HNil }
 
 case object JsonArrayTemplateConstructorPattern extends ExpressionPattern {
 
-  override val ExpressionCases: List[PatternCase] = List(
+  override val ExpressionCases: PatternCases = PatternCases[JsonArrayTemplateConstructor](
     (check[Comma] ->: capture[Selector] ->: check[LeftSquareBracket]).ifValidReplaceBy {
       case s :: HNil => List(JsonArrayTemplateConstructor(Seq(Right(s))))
     },

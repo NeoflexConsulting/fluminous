@@ -10,6 +10,6 @@ final case class JsonObjectTemplateConstructor(values: Map[String, Either[Json, 
 object JsonObjectTemplateConstructor {
   implicit def typeDescription: Description[JsonObjectTemplateConstructor] =
     new Description[JsonObjectTemplateConstructor] {
-      override val description: String = "start of json object"
+      override val description: String = "json object"
     }
 }

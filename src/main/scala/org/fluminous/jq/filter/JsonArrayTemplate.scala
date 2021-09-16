@@ -16,6 +16,6 @@ final case class JsonArrayTemplate(values: Seq[Either[Json, Filter]]) extends Fi
 
 object JsonArrayTemplate {
   implicit def typeDescription: Description[JsonArrayTemplate] = new Description[JsonArrayTemplate] {
-    override val description: String = "json array"
+    override val description: String = "end of json array"
   }
 }

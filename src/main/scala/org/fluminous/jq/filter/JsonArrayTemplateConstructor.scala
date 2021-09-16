@@ -10,6 +10,6 @@ final case class JsonArrayTemplateConstructor(values: Seq[Either[Json, Filter]])
 object JsonArrayTemplateConstructor {
   implicit def typeDescription: Description[JsonArrayTemplateConstructor] =
     new Description[JsonArrayTemplateConstructor] {
-      override val description: String = "start of json array"
+      override val description: String = "json array"
     }
 }

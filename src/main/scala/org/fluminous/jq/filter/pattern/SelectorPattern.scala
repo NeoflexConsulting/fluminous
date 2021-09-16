@@ -8,7 +8,7 @@ import shapeless.HNil
 import shapeless.::
 
 case object SelectorPattern extends ExpressionPattern {
-  override val ExpressionCases: List[PatternCase] = List(
+  override val ExpressionCases: PatternCases = PatternCases[Selector](
     (capture[Identifier] ->: check[Root]).ifValidReplaceBy {
       case id :: HNil => List(Selector(Seq(id.value)))
     },
