@@ -2,8 +2,8 @@ package org.fluminous.jq.tokens
 
 import io.circe.Json
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.{ input, ParserException }
-import org.fluminous.jq.input.{ Character, EOF }
+import org.fluminous.jq.{Description, ParserException, input}
+import org.fluminous.jq.input.{Character, EOF}
 
 trait Root extends BasicToken with Filter
 
@@ -18,4 +18,9 @@ case object Root extends Root {
   }
 
   override def transform(input: Json): Option[Json] = Option(input)
+
+  override val description: String = typeDescription.description
+  implicit def typeDescription: Description[Root] = new Description[Root] {
+    override val description: String = char.toString
+  }
 }

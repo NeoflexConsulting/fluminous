@@ -1,12 +1,12 @@
 package org.fluminous.jq.filter.pattern.dsl
 
 import cats.data.NonEmptyList
-import org.fluminous.jq.Expression
+import org.fluminous.jq.{ Description, Expression }
 import shapeless.{ HList, HNil }
 
 import scala.reflect.ClassTag
 
-sealed trait Matcher[Captured <: HList] extends MatcherInfo {
+sealed trait Matcher[Captured <: HList] extends MatcherReport {
   def ifValidReplaceBy(
     builder: Captured => List[Expression]
   ): NonEmptyList[Expression] => Either[InconsistencyMeasure, List[Expression]] = { input =>
@@ -21,12 +21,22 @@ sealed trait Matcher[Captured <: HList] extends MatcherInfo {
   def stackMatches(input: NonEmptyList[Expression]): Either[InconsistencyMeasure, (List[Expression], Captured)]
 }
 
-sealed trait BasicMatcher[E <: Expression, Captured <: HList] extends Matcher[Captured]
+abstract class BasicMatcher[E <: Expression: Description, Captured <: HList] extends Matcher[Captured] {
+  val description: String                          = implicitly[Description[E]].description
+  def matchError(actual: List[Expression]): String = { ??? }
+}
+
+abstract class CompositeMatcher[M <: BasicMatcher[_, _], RightCaptured <: HList, Captured <: HList](
+  left: M,
+  right: Matcher[RightCaptured])
+    extends Matcher[Captured] {
+  def matchError(actual: List[Expression]): String = { ??? }
+}
 
 final class CompositeCaptureMatcher[RightCaptured <: HList, E <: Expression, M <: CapturedMatcher[E]](
   left: M,
   right: Matcher[RightCaptured])
-    extends Matcher[shapeless.::[E, RightCaptured]] {
+    extends CompositeMatcher[M, RightCaptured, shapeless.::[E, RightCaptured]](left, right) {
   override def stackMatches(
     input: NonEmptyList[Expression]
   ): Either[InconsistencyMeasure, (List[Expression], shapeless.::[E, RightCaptured])] = {
@@ -45,7 +55,7 @@ final class CompositeCaptureMatcher[RightCaptured <: HList, E <: Expression, M <
 final class CompositeIsMatcher[RightCaptured <: HList, E <: Expression, M <: IsMatcher[E]](
   left: M,
   right: Matcher[RightCaptured])
-    extends Matcher[RightCaptured] {
+    extends CompositeMatcher[M, RightCaptured, RightCaptured](left, right) {
 
   override def stackMatches(
     input: NonEmptyList[Expression]
@@ -61,7 +71,7 @@ final class CompositeIsMatcher[RightCaptured <: HList, E <: Expression, M <: IsM
   }
 }
 
-final class IsMatcher[E <: Expression: ClassTag](condition: E => Boolean) extends BasicMatcher[E, HNil] {
+final class IsMatcher[E <: Expression: ClassTag: Description](condition: E => Boolean) extends BasicMatcher[E, HNil] {
   private val clazz = implicitly[ClassTag[E]].runtimeClass
   override def stackMatches(input: NonEmptyList[Expression]): Either[InconsistencyMeasure, (List[Expression], HNil)] = {
     input match {
@@ -71,27 +81,28 @@ final class IsMatcher[E <: Expression: ClassTag](condition: E => Boolean) extend
   }
 }
 
-final class CapturedMatcher[E <: Expression: ClassTag](condition: E => Boolean)
+final class CapturedMatcher[E <: Expression: ClassTag: Description](condition: E => Boolean)
     extends BasicMatcher[E, shapeless.::[E, HNil]] {
   private val clazz = implicitly[ClassTag[E]].runtimeClass
   override def stackMatches(
     input: NonEmptyList[Expression]
   ): Either[InconsistencyMeasure, (List[Expression], shapeless.::[E, HNil])] = {
     input match {
-      case NonEmptyList(head: E, tail) if clazz.isInstance(head) && condition(head) => Right((tail, head :: HNil))
-      case _                                                                        => Left(InconsistencyNumber(1))
+      case NonEmptyList(head, tail) if clazz.isInstance(head) && condition(head.asInstanceOf[E]) =>
+        Right((tail, head.asInstanceOf[E] :: HNil))
+      case _ => Left(InconsistencyNumber(1))
     }
   }
 }
 
 object Matcher {
-  def check[T <: Expression: ClassTag]: IsMatcher[T] = checkIf[T](_ => true)
+  def check[E <: Expression: ClassTag: Description]: IsMatcher[E] = checkIf[E](_ => true)
 
-  def checkIf[T <: Expression: ClassTag](condition: T => Boolean): IsMatcher[T] =
-    new IsMatcher[T](condition)
+  def checkIf[E <: Expression: ClassTag: Description](condition: E => Boolean): IsMatcher[E] =
+    new IsMatcher[E](condition)
 
-  def capture[T <: Expression: ClassTag]: CapturedMatcher[T] = captureIf[T](_ => true)
+  def capture[E <: Expression: ClassTag: Description]: CapturedMatcher[E] = captureIf[E](_ => true)
 
-  def captureIf[T <: Expression: ClassTag](condition: T => Boolean): CapturedMatcher[T] =
-    new CapturedMatcher[T](condition)
+  def captureIf[E <: Expression: ClassTag: Description](condition: E => Boolean): CapturedMatcher[E] =
+    new CapturedMatcher[E](condition)
 }

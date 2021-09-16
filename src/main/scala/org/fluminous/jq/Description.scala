@@ -1,5 +1,5 @@
 package org.fluminous.jq
 
-trait Expression {
+trait Description[T <: Expression] {
   val description: String
 }

@@ -1,6 +1,6 @@
 package org.fluminous.jq.tokens
 
-import org.fluminous.jq.{ input, ParserException }
+import org.fluminous.jq.{ input, Description, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 
 case class Identifier(value: String) extends Token {
@@ -14,5 +14,12 @@ case class Identifier(value: String) extends Token {
         Right(Some(Identifier(value :+ c)))
     }
   }
-  override def toString: String = value
+  override def toString: String    = value
+  override val description: String = toString
+}
+
+object Identifier {
+  implicit def typeDescription: Description[Identifier] = new Description[Identifier] {
+    override val description: String = "identifier"
+  }
 }

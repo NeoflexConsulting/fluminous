@@ -1,6 +1,6 @@
 package org.fluminous.jq.tokens
 
-import org.fluminous.jq.{ input, ParserException }
+import org.fluminous.jq.{ input, Description, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 
 case class RawString(value: String, finished: Boolean = true) extends Token {
@@ -15,5 +15,12 @@ case class RawString(value: String, finished: Boolean = true) extends Token {
       }
     }
   }
-  override def toString: String = s""""$value""""
+  override def toString: String    = s""""$value""""
+  override val description: String = toString
+}
+
+object RawString {
+  implicit def typeDescription: Description[RawString] = new Description[RawString] {
+    override val description: String = "quoted string"
+  }
 }

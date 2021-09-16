@@ -1,6 +1,6 @@
 package org.fluminous.jq.tokens
 
-import org.fluminous.jq.{ input, ParserException }
+import org.fluminous.jq.{ input, Description, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 
 case class DecimalNumber(value: String) extends Token {
@@ -18,6 +18,13 @@ case class DecimalNumber(value: String) extends Token {
         Left(ParserException(position, "Identifier could not start with number. Try to surround it by quotes"))
     }
   }
-  def asDecimal: BigDecimal     = BigDecimal(value)
-  override def toString: String = value
+  def asDecimal: BigDecimal        = BigDecimal(value)
+  override def toString: String    = value
+  override val description: String = toString
+}
+
+object DecimalNumber {
+  implicit def typeDescription: Description[DecimalNumber] = new Description[DecimalNumber] {
+    override val description: String = "decimal number"
+  }
 }

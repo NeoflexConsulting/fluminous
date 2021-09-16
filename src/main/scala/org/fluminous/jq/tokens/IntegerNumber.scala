@@ -1,6 +1,6 @@
 package org.fluminous.jq.tokens
 
-import org.fluminous.jq.{ input, ParserException }
+import org.fluminous.jq.{ input, Description, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 
 case class IntegerNumber(value: String) extends Token {
@@ -21,6 +21,13 @@ case class IntegerNumber(value: String) extends Token {
 
     }
   }
-  def asInt: Int = value.toInt
-  override def toString: String = value
+  def asInt: Int                   = value.toInt
+  override def toString: String    = value
+  override val description: String = toString
+}
+
+object IntegerNumber {
+  implicit def typeDescription: Description[IntegerNumber] = new Description[IntegerNumber] {
+    override val description: String = "integer number"
+  }
 }

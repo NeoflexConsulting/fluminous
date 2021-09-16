@@ -1,9 +1,10 @@
 package org.fluminous.jq.tokens
 
-import org.fluminous.jq.{ input, ParserException }
+import org.fluminous.jq.{ input, Description, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 
-case object RecursiveDescent extends Token {
+trait RecursiveDescent extends Token
+case object RecursiveDescent extends RecursiveDescent {
   def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, Option[Token]] = {
     symbol match {
       case Character(c) if Token.whitespaceSymbols.contains(c) || c == Pipe.char =>
@@ -14,5 +15,9 @@ case object RecursiveDescent extends Token {
         Left(ParserException(position, s"""Invalid sequence "..$c""""))
     }
   }
-  override def toString: String = raw"""\\"""
+  override def toString: String    = raw"""\\"""
+  override val description: String = toString
+  implicit def typeDescription: Description[RecursiveDescent] = new Description[RecursiveDescent] {
+    override val description: String = toString
+  }
 }
