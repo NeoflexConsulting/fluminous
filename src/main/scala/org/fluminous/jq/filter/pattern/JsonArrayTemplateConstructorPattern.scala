@@ -1,13 +1,13 @@
 package org.fluminous.jq.filter.pattern
 
 import io.circe.Json
-import org.fluminous.jq.filter.pattern.dsl.MatcherExpression.{ capture, check }
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, check }
 import org.fluminous.jq.filter.{ JsonArrayTemplate, JsonArrayTemplateConstructor, JsonObjectTemplate, Selector }
 import org.fluminous.jq.tokens.{ Comma, DecimalNumber, IntegerNumber, LeftSquareBracket, RawString, Root }
-import shapeless.HNil
-import shapeless.::
+import shapeless.{ ::, HNil }
 
 case object JsonArrayTemplateConstructorPattern extends ExpressionPattern {
+
   override val ExpressionCases: List[PatternCase] = List(
     (check[Comma] ->: capture[Selector] ->: check[LeftSquareBracket]).ifValidReplaceBy {
       case s :: HNil => List(JsonArrayTemplateConstructor(Seq(Right(s))))

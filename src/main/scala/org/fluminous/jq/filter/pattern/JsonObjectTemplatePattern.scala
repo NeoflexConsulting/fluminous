@@ -18,7 +18,7 @@ import org.fluminous.jq.tokens.{
   Root
 }
 
-import org.fluminous.jq.filter.pattern.dsl.MatcherExpression.{ capture, check }
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, check }
 import shapeless.HNil
 import shapeless.::
 

@@ -6,52 +6,27 @@ import shapeless.{ HList, HNil }
 
 import scala.reflect.ClassTag
 
-sealed trait InconsistencyMeasure {
-  def +(r: InconsistencyMeasure): InconsistencyMeasure
-}
-
-case class InconsistencyNumber(number: Int) extends InconsistencyMeasure {
-  override def +(r: InconsistencyMeasure): InconsistencyMeasure = {
-    r match {
-      case InconsistencyNumber(ir) => InconsistencyNumber(number + ir)
-      case _                       => Infinite
-    }
-  }
-}
-
-case object Infinite extends InconsistencyMeasure {
-  override def +(r: InconsistencyMeasure): InconsistencyMeasure = this
-}
-
-trait MatcherExpression[Captured <: HList] {
+sealed trait Matcher[Captured <: HList] {
   def ifValidReplaceBy(
     builder: Captured => List[Expression]
   ): NonEmptyList[Expression] => Either[InconsistencyMeasure, List[Expression]] = { input =>
     stackMatches(input).map { case (stack, captured) => builder(captured) ++ stack }
   }
-  def ->:[E <: Expression](
-    left: CapturedMatcherExpression[E]
-  ): CompositeCapturedMatcherExpression[Captured, E, CapturedMatcherExpression[E]] =
-    new CompositeCapturedMatcherExpression[Captured, E, CapturedMatcherExpression[E]](left, this)
+  def ->:[E <: Expression](left: CapturedMatcher[E]): CompositeCaptureMatcher[Captured, E, CapturedMatcher[E]] =
+    new CompositeCaptureMatcher[Captured, E, CapturedMatcher[E]](left, this)
 
-  def ->:[E <: Expression](
-    left: IsMatcherExpression[E]
-  ): CompositeIsMatcherExpression[Captured, E, IsMatcherExpression[E]] =
-    new CompositeIsMatcherExpression[Captured, E, IsMatcherExpression[E]](left, this)
+  def ->:[E <: Expression](left: IsMatcher[E]): CompositeIsMatcher[Captured, E, IsMatcher[E]] =
+    new CompositeIsMatcher[Captured, E, IsMatcher[E]](left, this)
 
   def stackMatches(input: NonEmptyList[Expression]): Either[InconsistencyMeasure, (List[Expression], Captured)]
 }
 
-trait PrimitiveMatcherExpression[E <: Expression, Captured <: HList] extends MatcherExpression[Captured]
+sealed trait BasicMatcher[E <: Expression, Captured <: HList] extends Matcher[Captured]
 
-final class CompositeCapturedMatcherExpression[
-  RightCaptured <: HList,
-  E <: Expression,
-  M <: CapturedMatcherExpression[E]
-](
+final class CompositeCaptureMatcher[RightCaptured <: HList, E <: Expression, M <: CapturedMatcher[E]](
   left: M,
-  right: MatcherExpression[RightCaptured])
-    extends MatcherExpression[shapeless.::[E, RightCaptured]] {
+  right: Matcher[RightCaptured])
+    extends Matcher[shapeless.::[E, RightCaptured]] {
   override def stackMatches(
     input: NonEmptyList[Expression]
   ): Either[InconsistencyMeasure, (List[Expression], shapeless.::[E, RightCaptured])] = {
@@ -67,10 +42,10 @@ final class CompositeCapturedMatcherExpression[
   }
 }
 
-final class CompositeIsMatcherExpression[RightCaptured <: HList, E <: Expression, M <: IsMatcherExpression[E]](
+final class CompositeIsMatcher[RightCaptured <: HList, E <: Expression, M <: IsMatcher[E]](
   left: M,
-  right: MatcherExpression[RightCaptured])
-    extends MatcherExpression[RightCaptured] {
+  right: Matcher[RightCaptured])
+    extends Matcher[RightCaptured] {
 
   override def stackMatches(
     input: NonEmptyList[Expression]
@@ -86,8 +61,7 @@ final class CompositeIsMatcherExpression[RightCaptured <: HList, E <: Expression
   }
 }
 
-final class IsMatcherExpression[E <: Expression: ClassTag](condition: E => Boolean)
-    extends PrimitiveMatcherExpression[E, HNil] {
+final class IsMatcher[E <: Expression: ClassTag](condition: E => Boolean) extends BasicMatcher[E, HNil] {
   private val clazz = implicitly[ClassTag[E]].runtimeClass
   override def stackMatches(input: NonEmptyList[Expression]): Either[InconsistencyMeasure, (List[Expression], HNil)] = {
     input match {
@@ -97,8 +71,8 @@ final class IsMatcherExpression[E <: Expression: ClassTag](condition: E => Boole
   }
 }
 
-final class CapturedMatcherExpression[E <: Expression: ClassTag](condition: E => Boolean)
-    extends PrimitiveMatcherExpression[E, shapeless.::[E, HNil]] {
+final class CapturedMatcher[E <: Expression: ClassTag](condition: E => Boolean)
+    extends BasicMatcher[E, shapeless.::[E, HNil]] {
   private val clazz = implicitly[ClassTag[E]].runtimeClass
   override def stackMatches(
     input: NonEmptyList[Expression]
@@ -110,14 +84,14 @@ final class CapturedMatcherExpression[E <: Expression: ClassTag](condition: E =>
   }
 }
 
-object MatcherExpression {
-  def check[T <: Expression: ClassTag]: IsMatcherExpression[T] = checkIf[T](_ => true)
+object Matcher {
+  def check[T <: Expression: ClassTag]: IsMatcher[T] = checkIf[T](_ => true)
 
-  def checkIf[T <: Expression: ClassTag](condition: T => Boolean): IsMatcherExpression[T] =
-    new IsMatcherExpression[T](condition)
+  def checkIf[T <: Expression: ClassTag](condition: T => Boolean): IsMatcher[T] =
+    new IsMatcher[T](condition)
 
-  def capture[T <: Expression: ClassTag]: CapturedMatcherExpression[T] = captureIf[T](_ => true)
+  def capture[T <: Expression: ClassTag]: CapturedMatcher[T] = captureIf[T](_ => true)
 
-  def captureIf[T <: Expression: ClassTag](condition: T => Boolean): CapturedMatcherExpression[T] =
-    new CapturedMatcherExpression[T](condition)
+  def captureIf[T <: Expression: ClassTag](condition: T => Boolean): CapturedMatcher[T] =
+    new CapturedMatcher[T](condition)
 }

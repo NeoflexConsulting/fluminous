@@ -3,7 +3,7 @@ package org.fluminous.jq.filter.pattern
 import org.fluminous.jq.filter.JsonTupleHeader
 import org.fluminous.jq.tokens.{ Colon, Identifier, RawString }
 
-import org.fluminous.jq.filter.pattern.dsl.MatcherExpression.{ capture, check }
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, check }
 import shapeless.HNil
 import shapeless.::
 
