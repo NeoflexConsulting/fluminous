@@ -1,15 +1,14 @@
 package org.fluminous.jq.filter.pattern
 
-import cats.data.NonEmptyList
+import cats.data.{ NonEmptyList, Validated }
 import org.fluminous.jq.{ Description, Expression }
-import org.fluminous.jq.filter.pattern.dsl.InconsistencyMeasure
+import org.fluminous.jq.filter.pattern.dsl.MatchFailure
 
-case class PatternCases(
-  name: String,
-  cases: List[NonEmptyList[Expression] => Either[InconsistencyMeasure, List[Expression]]])
+case class PatternCases(name: String, cases: List[PatternCase])
+
+case class PatternCase(length: Int, patternCase: NonEmptyList[Expression] => Validated[MatchFailure, List[Expression]])
 
 object PatternCases {
-  def apply[T <: Expression: Description](
-    patternCases: NonEmptyList[Expression] => Either[InconsistencyMeasure, List[Expression]]*
-  ): PatternCases = PatternCases(implicitly[Description[T]].description, patternCases.toList)
+  def apply[T <: Expression: Description](patternCases: PatternCase*): PatternCases =
+    PatternCases(implicitly[Description[T]].description, patternCases.toList)
 }
