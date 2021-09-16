@@ -6,7 +6,7 @@ import shapeless.{ HList, HNil }
 
 import scala.reflect.ClassTag
 
-sealed trait Matcher[Captured <: HList] {
+sealed trait Matcher[Captured <: HList] extends MatcherInfo {
   def ifValidReplaceBy(
     builder: Captured => List[Expression]
   ): NonEmptyList[Expression] => Either[InconsistencyMeasure, List[Expression]] = { input =>

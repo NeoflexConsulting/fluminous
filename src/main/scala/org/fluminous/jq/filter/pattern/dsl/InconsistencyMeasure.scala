@@ -16,3 +16,16 @@ case class InconsistencyNumber(number: Int) extends InconsistencyMeasure {
 case object Infinite extends InconsistencyMeasure {
   override def +(r: InconsistencyMeasure): InconsistencyMeasure = this
 }
+
+object InconsistencyMeasure {
+  implicit val ordering = new Ordering[InconsistencyMeasure] {
+    override def compare(x: InconsistencyMeasure, y: InconsistencyMeasure): Int = {
+      (x, y) match {
+        case (_: Infinite.type, InconsistencyNumber(_))       => 1
+        case (InconsistencyNumber(_), _: Infinite.type)       => -1
+        case (_: Infinite.type, _: Infinite.type)             => 0
+        case (InconsistencyNumber(l), InconsistencyNumber(r)) => l compare r
+      }
+    }
+  }
+}

@@ -18,14 +18,14 @@ trait Parser {
     parse(Tokenizer(input))
   }
   @tailrec
-  private def parse(tokenizer: Tokenizer, stack: Stack = List.empty): Either[ParserException, Filter] = {
+  private def parse(tokenizer: Tokenizer, state: ParserState = ParserState()): Either[ParserException, Filter] = {
     tokenizer.nextToken match {
       case Left(ex) =>
         Left(ex)
       case Right((updatedTokenizer, None)) =>
-        getFilterFromStack(updatedTokenizer, foldStack(stack))
+        getFilterFromStack(updatedTokenizer, foldStack(state.stack))
       case Right((updatedTokenizer, Some(token))) =>
-        parse(updatedTokenizer, applyTokenToStack(token, stack))
+        parse(updatedTokenizer, applyTokenToStack(token, state))
     }
   }
 
@@ -40,11 +40,13 @@ trait Parser {
     }
   }
 
-  private def applyTokenToStack(token: Token, stack: Stack): Stack = {
+  private def applyTokenToStack(token: Token, state: ParserState): ParserState = {
     import ExpressionPattern._
-    val newStack = NonEmptyList(token, stack)
+    val newStack = NonEmptyList(token, state.stack)
     logger.debug(printStack(newStack))
-    patterns.foldMapK(_.instantiateOnStack(newStack)).map(foldStack).getOrElse(newStack.toList)
+    val updatedStack =
+      patterns.foldMapK(_.instantiateOnStack(newStack)).map(foldStack).getOrElse(newStack.toList)
+    state.copy(stack = updatedStack)
   }
 
   @tailrec
