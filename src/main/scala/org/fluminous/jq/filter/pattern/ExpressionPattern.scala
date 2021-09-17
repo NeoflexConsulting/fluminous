@@ -37,7 +37,7 @@ trait ExpressionPattern {
 }
 
 object ExpressionPattern {
-  val patterns = List(
+  val patterns: List[ExpressionPattern] = List(
     SelectorPattern,
     JsonTupleHeaderPattern,
     JsonObjectTemplatePattern,

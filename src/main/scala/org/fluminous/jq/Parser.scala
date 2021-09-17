@@ -44,9 +44,11 @@ trait Parser {
     import ExpressionPattern._
     val newStack = NonEmptyList(token, state.stack)
     logger.debug(printStack(newStack))
-    val updatedStack =
-      patterns.foldMapK(_.instantiateOnStack(newStack)).map(foldStack).getOrElse(newStack.toList)
-    state.copy(stack = updatedStack)
+    val updatedStackOrErrors =
+      patterns.foldMapA(_.instantiateOnStack(newStack).leftMap(List(_)))
+    updatedStackOrErrors
+      .leftMap(ParserFailure(_))
+      .fold(state.tokenFailed, s => state.tokenSucceed(foldStack(s)))
   }
 
   @tailrec
@@ -54,7 +56,7 @@ trait Parser {
     logger.debug(printStack(stack))
     import ExpressionPattern._
     val updatedStack = NonEmptyList.fromList(stack).flatMap { nonEmptyStack =>
-      patterns.foldMapK(_.instantiateOnStack(nonEmptyStack))
+      patterns.foldMapA(_.instantiateOnStack(nonEmptyStack).leftMap(List(_))).toOption
     }
     updatedStack match {
       case None           => stack

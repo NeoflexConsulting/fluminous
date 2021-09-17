@@ -1,20 +1,31 @@
 package org.fluminous.jq
 
 import org.fluminous.jq.filter.pattern.PatternFailure
-import org.fluminous.jq.filter.pattern.dsl.MismatchesQty
+import cats.syntax.foldable._
 
-case class ParserFailure(failures: Seq[PatternFailure], positionInStack: Int)
+case class ParserFailure(failures: Seq[PatternFailure], positionInStack: Int) {
+  def mergeWith(parserFailure: ParserFailure): Option[ParserFailure] = {
+    if (positionInStack == parserFailure.positionInStack) {
+      Some(ParserFailure(failures ++ parserFailure.failures, positionInStack))
+    } else {
+      None
+    }
+  }
+}
+
+object ParserFailure {
+  def apply(failures: List[PatternFailure]): ParserFailure = {
+    val nearestFailures = failures.minimumByList(_.firstMismatchPositionInStack)
+    ParserFailure(nearestFailures, nearestFailures.map(_.firstMismatchPositionInStack).min)
+  }
+}
 
 case class ParserState(stack: List[Expression] = List.empty, failInfo: Option[ParserFailure] = None) {
-  def resetFailInfo: ParserState = this.copy(failInfo = None)
-  def saveFailedMatcher(matcherInfo: MatcherReport, position: Int, i: MismatchesQty): ParserState = {
+  def tokenSucceed(updatedStack: List[Expression]): ParserState = ParserState(updatedStack, None)
+  def tokenFailed(parserFailure: ParserFailure): ParserState = {
     this.failInfo
-      .filter(_.inconsistencyMeasure <= i)
-      .fold(this.copy(failInfo = Some(FailInfo(matcherInfo, i, position, None))))(_ => this)
-  }
-  def saveActualToken(token: Expression): ParserState = {
-    this.failInfo
-      .map(f => f.nextActualToken.fold(this.copy(failInfo = Some(f.copy(nextActualToken = Some(token)))))(_ => this))
-      .getOrElse(this)
+      .fold(this.copy(failInfo = Some(parserFailure))) { failInfo =>
+        failInfo.mergeWith(parserFailure).fold(this)(pf => this.copy(failInfo = Some(pf)))
+      }
   }
 }
