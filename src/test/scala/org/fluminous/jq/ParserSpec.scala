@@ -68,7 +68,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         )
       )
       parse(""" {customer:.}""") should be(
-        Right(JsonObjectTemplate(1, Map("customer" -> Right(Root(11)))))
+        Right(JsonObjectTemplate(2, Map("customer" -> Right(Root(12)))))
       )
 
       parse("""{customer: {id : .customerId, name, age}}""") should be(
