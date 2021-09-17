@@ -4,7 +4,7 @@ import cats.Order
 import cats.data.{ NonEmptyList, Validated }
 import org.fluminous.jq.{ Expression, FoldFunctions }
 import cats.syntax.foldable._
-import org.fluminous.jq.filter.pattern.dsl.{ MatchFailure, MismatchesQty }
+import org.fluminous.jq.filter.pattern.dsl.{ CompleteMismatch, MatchFailure, MismatchesQty }
 trait ExpressionPattern extends FoldFunctions {
   def instantiateOnStack(stack: NonEmptyList[Expression]): Validated[PatternFailure, List[Expression]] = {
     firstValidOrAllInvalids(ExpressionCases.cases)(p => p.patternCase(stack).leftMap(f => (p.length, f)))
@@ -12,7 +12,7 @@ trait ExpressionPattern extends FoldFunctions {
   }
 
   private def filterRelevant(failures: List[(Int, MatchFailure)]): PatternFailure = {
-    val relevantFailures = failures.minimumList
+    val relevantFailures = failures.filter(_._2.overallMismatchesQty != CompleteMismatch).minimumList
     val position         = relevantFailures.map(_._2.position).headOption.getOrElse(0)
     val relevantPatternCaseFailures = relevantFailures.map {
       case (_, matchFailure) => PatternCaseFailure(matchFailure.actualExpression, matchFailure.expectedExpression)
