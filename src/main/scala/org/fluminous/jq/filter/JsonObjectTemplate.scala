@@ -3,7 +3,7 @@ package org.fluminous.jq.filter
 import io.circe.Json
 import org.fluminous.jq.Description
 
-case class JsonObjectTemplate(values: Map[String, Either[Json, Filter]]) extends Filter {
+case class JsonObjectTemplate(override val position: Int, values: Map[String, Either[Json, Filter]]) extends Filter {
   override def transform(input: Json): Option[Json] = {
     Option(Json.fromFields(values.toSeq.flatMap(valueToJson(input))))
   }

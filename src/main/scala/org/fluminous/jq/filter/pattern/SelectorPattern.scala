@@ -10,16 +10,16 @@ import shapeless.::
 case object SelectorPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[Selector](
     (capture[Identifier] ->: check[Root]).ifValidReplaceBy {
-      case id :: HNil => List(Selector(Seq(id.value)))
+      case id :: HNil => Selector(_, Seq(id.value))
     },
     (capture[RawString] ->: check[Root]).ifValidReplaceBy {
-      case s :: HNil => List(Selector(Seq(s.value)))
+      case s :: HNil => Selector(_, Seq(s.value))
     },
     (capture[Selector] ->: capture[Selector]).ifValidReplaceBy {
-      case s1 :: s2 :: HNil => List(Selector(s2.path ++ s1.path))
+      case s1 :: s2 :: HNil => Selector(_, s2.path ++ s1.path)
     },
     (capture[Selector] ->: check[Pipe] ->: capture[Selector]).ifValidReplaceBy {
-      case s1 :: s2 :: HNil => List(Selector(s2.path ++ s1.path))
+      case s1 :: s2 :: HNil => Selector(_, s2.path ++ s1.path)
     }
   )
 }

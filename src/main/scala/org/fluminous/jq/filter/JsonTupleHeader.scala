@@ -2,7 +2,7 @@ package org.fluminous.jq.filter
 
 import org.fluminous.jq.{ Description, Expression }
 
-final case class JsonTupleHeader(fieldName: String) extends Expression {
+final case class JsonTupleHeader(override val position: Int, fieldName: String) extends Expression {
   override val description: String = JsonTupleHeader.typeDescription.description
 }
 

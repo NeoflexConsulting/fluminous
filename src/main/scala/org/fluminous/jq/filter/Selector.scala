@@ -3,7 +3,7 @@ package org.fluminous.jq.filter
 import io.circe.Json
 import org.fluminous.jq.Description
 
-final case class Selector(path: Seq[String]) extends Filter {
+final case class Selector(override val position: Int, path: Seq[String]) extends Filter {
   override def transform(input: Json): Option[Json] = {
     path.foldLeft(Option(input)) { (json, childName) =>
       json.flatMap(_.asObject) match {

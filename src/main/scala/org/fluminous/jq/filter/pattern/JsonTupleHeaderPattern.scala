@@ -9,11 +9,11 @@ import shapeless.::
 
 case object JsonTupleHeaderPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[JsonTupleHeader](
-      (check[Colon] ->: capture[Identifier]).ifValidReplaceBy {
-        case id :: HNil => List(JsonTupleHeader(id.value))
-      },
-      (check[Colon] ->: capture[RawString]).ifValidReplaceBy {
-        case s :: HNil => List(JsonTupleHeader(s.value))
-      }
+    (check[Colon] ->: capture[Identifier]).ifValidReplaceBy {
+      case id :: HNil => JsonTupleHeader(_, id.value)
+    },
+    (check[Colon] ->: capture[RawString]).ifValidReplaceBy {
+      case s :: HNil => JsonTupleHeader(_, s.value)
+    }
   )
 }
