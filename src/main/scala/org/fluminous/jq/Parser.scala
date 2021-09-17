@@ -49,12 +49,13 @@ trait Parser extends FoldFunctions {
   private def applyTokenToStack(token: Token, state: ParserState): ParserState = {
     import ExpressionPattern._
     val newStack = NonEmptyList(token, state.stack)
-    logger.debug(printState(newStack, state.failInfo))
+    val newState = state.copy(stack = newStack.toList)
+    logger.debug(printState(newStack, newState.failInfo))
     val updatedStackOrErrors =
-      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(newStack))
+      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(newStack)).leftMap(_.filter(_.failures.nonEmpty))
     updatedStackOrErrors
       .leftMap(ParserFailure(_))
-      .fold(state.tokenFailed, s => state.tokenSucceed(foldStack(s)))
+      .fold(newState.tokenFailed, s => newState.tokenSucceed(foldStack(s)))
   }
 
   @tailrec

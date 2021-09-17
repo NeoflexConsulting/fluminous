@@ -13,10 +13,10 @@ trait ExpressionPattern extends FoldFunctions {
 
   private def filterRelevant(failures: List[(Int, MatchFailure)]): PatternFailure = {
     val relevantFailures = failures.filter(_._2.overallMismatchesQty != CompleteMismatch).minimumList
-    val position         = relevantFailures.map(_._2.position).headOption.getOrElse(0)
     val relevantPatternCaseFailures = relevantFailures.map {
       case (_, matchFailure) => PatternCaseFailure(matchFailure.actualExpression, matchFailure.expectedExpression)
     }
+    val position         = relevantFailures.map(_._2.position).headOption.getOrElse(1)
     PatternFailure(ExpressionCases.name, position, relevantPatternCaseFailures)
   }
 

@@ -32,14 +32,23 @@ case class ParserFailure(failures: Seq[PatternFailure], position: Int) {
 }
 
 object ParserFailure {
-  def apply(failures: List[PatternFailure]): ParserFailure = {
+  def apply(failures: List[PatternFailure]): Option[ParserFailure] = {
     val nearestFailures = failures.minimumByList(_.position)
-    ParserFailure(nearestFailures, nearestFailures.map(_.position).min)
+    nearestFailures.map(_.position).minimumOption.map { min =>
+      ParserFailure(nearestFailures, min)
+    }
   }
 }
 
 case class ParserState(stack: List[Expression] = List.empty, failInfo: Option[ParserFailure] = None) {
-  def tokenSucceed(updatedStack: List[Expression]): ParserState = ParserState(updatedStack, None)
+  def tokenSucceed(updatedStack: List[Expression]): ParserState = {
+    ParserState(updatedStack, None)
+  }
+
+  def tokenFailed(parserFailure: Option[ParserFailure]): ParserState = {
+    parserFailure.map(tokenFailed).getOrElse(this)
+  }
+
   def tokenFailed(parserFailure: ParserFailure): ParserState = {
     this.failInfo
       .fold(this.copy(failInfo = Some(parserFailure))) { failInfo =>
