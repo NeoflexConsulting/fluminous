@@ -9,7 +9,9 @@ import org.fluminous.jq.tokens.Token
 import scala.annotation.tailrec
 import cats.syntax.foldable._
 import cats.instances.list._
+import io.circe.Decoder.state
 import org.slf4j.LoggerFactory
+import ru.CryptoPro.JCP.ASN.PKIXCMP.PKIFailureInfo
 
 trait Parser {
   private val logger = LoggerFactory.getLogger(getClass)
@@ -36,22 +38,22 @@ trait Parser {
   ): Either[ParserException, Filter] = {
     stack match {
       case Nil =>
+        Left(ParserException(tokenizer.input.position, "Invalid input: empty"))
+      case (filter: Filter) :: Nil =>
+        Right(filter)
+      case _ :: _ =>
         Left(
           failInfo.fold(ParserException(tokenizer.input.position, "Unknown parsing error"))(f =>
             ParserException(f.position, f.formatError)
           )
         )
-      case (filter: Filter) :: Nil =>
-        Right(filter)
-      case expr1 :: _ =>
-        Left(ParserException(tokenizer.input.position, s"Invalid input: '$expr1'"))
     }
   }
 
   private def applyTokenToStack(token: Token, state: ParserState): ParserState = {
     import ExpressionPattern._
     val newStack = NonEmptyList(token, state.stack)
-    logger.debug(printStack(newStack))
+    logger.debug(printState(newStack, state.failInfo))
     val updatedStackOrErrors =
       patterns.foldMapA(_.instantiateOnStack(newStack).leftMap(List(_)))
     updatedStackOrErrors
@@ -72,6 +74,8 @@ trait Parser {
     }
   }
 
-  private def printStack(stack: NonEmptyList[Expression]): String = stack.toList.mkString("Stack: ", ",", "")
-  private def printStack(stack: List[Expression]): String         = stack.mkString("Stack: ", ",", "")
+  private def printState(stack: NonEmptyList[Expression], failureInfo: Option[ParserFailure]): String = {
+    stack.toList.mkString("Stack: ", ",", "\n") ++ failureInfo.toString
+  }
+  private def printStack(stack: List[Expression]): String = stack.mkString("Folded stack: ", ",", "")
 }
