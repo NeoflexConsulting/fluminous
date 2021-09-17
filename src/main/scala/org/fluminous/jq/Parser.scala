@@ -9,9 +9,7 @@ import org.fluminous.jq.tokens.Token
 import scala.annotation.tailrec
 import cats.syntax.foldable._
 import cats.instances.list._
-import io.circe.Decoder.state
 import org.slf4j.LoggerFactory
-import ru.CryptoPro.JCP.ASN.PKIXCMP.PKIFailureInfo
 
 trait Parser {
   private val logger = LoggerFactory.getLogger(getClass)
