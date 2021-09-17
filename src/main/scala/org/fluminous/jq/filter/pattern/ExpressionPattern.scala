@@ -12,7 +12,7 @@ trait ExpressionPattern {
 
   private def filterRelevant(failures: List[(Int, MatchFailure)]): PatternFailure = {
     val relevantFailures = failures.minimumList
-    val position         = relevantFailures.map(positionFromStart).headOption.getOrElse(0)
+    val position         = relevantFailures.map(_._2.position).headOption.getOrElse(0)
     val relevantPatternCaseFailures = relevantFailures.map {
       case (_, matchFailure) => PatternCaseFailure(matchFailure.actualExpression, matchFailure.expectedExpression)
     }
@@ -21,16 +21,12 @@ trait ExpressionPattern {
 
   implicit def positionFromStartAndMismatches: Order[(Int, MatchFailure)] = new Order[(Int, MatchFailure)] {
     override def compare(x: (Int, MatchFailure), y: (Int, MatchFailure)): Int = {
-      val positionResult = implicitly[Order[Int]].compare(positionFromStart(x), positionFromStart(y))
+      val positionResult = implicitly[Order[Int]].compare(x._2.position, y._2.position)
       if (positionResult != 0)
         positionResult
       else
         implicitly[Order[MismatchesQty]].compare(x._2.overallMismatchesQty, y._2.overallMismatchesQty)
     }
-  }
-
-  private def positionFromStart(failure: (Int, MatchFailure)): Int = {
-    failure._1 - failure._2.firstMismatchPositionFromEnd + 1
   }
 
   protected val ExpressionCases: PatternCases

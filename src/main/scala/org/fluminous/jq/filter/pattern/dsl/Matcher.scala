@@ -49,10 +49,10 @@ final class CompositeCaptureMatcher[RightCaptured <: HList, E <: Expression, M <
   ): Validated[MatchFailure, (Int, List[Expression], shapeless.::[E, RightCaptured])] = {
     val leftResult = left.stackMatches(input)
     val rightResult =
-      NonEmptyList.fromList(input.tail).map(right.stackMatches(_)).getOrElse(Invalid(StackIsNotEnough(size)))
+      NonEmptyList.fromList(input.tail).map(right.stackMatches(_)).getOrElse(Invalid(StackIsNotEnough))
     (leftResult, rightResult) match {
       case (Invalid(failure), Valid(_)) =>
-        Invalid(failure.copy(firstMismatchPositionFromEnd = size, overallMismatchesQty = MismatchNumber(1)))
+        Invalid(failure.copy(position = input.head.position, overallMismatchesQty = MismatchNumber(1)))
       case (Valid((_, _, capturedL)), Valid((position, stack, capturedR))) =>
         Valid((position, stack, shapeless.::(capturedL.head, capturedR)))
       case (Valid(_), Invalid(failure)) =>
@@ -77,10 +77,10 @@ final class CompositeIsMatcher[RightCaptured <: HList, E <: Expression, M <: IsM
   ): Validated[MatchFailure, (Int, List[Expression], RightCaptured)] = {
     val leftResult = left.stackMatches(input)
     val rightResult =
-      NonEmptyList.fromList(input.tail).map(right.stackMatches(_)).getOrElse(Invalid(StackIsNotEnough(size)))
+      NonEmptyList.fromList(input.tail).map(right.stackMatches(_)).getOrElse(Invalid(StackIsNotEnough))
     (leftResult, rightResult) match {
       case (Invalid(failure), Valid(_)) =>
-        Invalid(failure.copy(firstMismatchPositionFromEnd = size, overallMismatchesQty = MismatchNumber(1)))
+        Invalid(failure.copy(position = input.head.position, overallMismatchesQty = MismatchNumber(1)))
       case (Valid(_), Valid(captured)) =>
         Valid(captured)
       case (Valid(_), Invalid(failure)) =>
@@ -102,7 +102,7 @@ final class IsMatcher[E <: Expression: ClassTag: Description](condition: E => Bo
       case NonEmptyList(head: E, tail) if clazz.isInstance(head) && condition(head) =>
         Valid((head.position, tail, HNil))
       case NonEmptyList(head, _) =>
-        Invalid(MatchFailure(size, head.description, description, CompleteMismatch))
+        Invalid(MatchFailure(head.position, head.description, description, CompleteMismatch))
     }
   }
 }
@@ -117,7 +117,7 @@ final class CapturedMatcher[E <: Expression: ClassTag: Description](condition: E
       case NonEmptyList(head, tail) if clazz.isInstance(head) && condition(head.asInstanceOf[E]) =>
         Valid((head.position, tail, head.asInstanceOf[E] :: HNil))
       case NonEmptyList(head, _) =>
-        Invalid(MatchFailure(size, head.description, description, CompleteMismatch))
+        Invalid(MatchFailure(head.position, head.description, description, CompleteMismatch))
     }
   }
 }

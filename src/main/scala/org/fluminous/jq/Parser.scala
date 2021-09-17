@@ -23,16 +23,24 @@ trait Parser {
       case Left(ex) =>
         Left(ex)
       case Right((updatedTokenizer, None)) =>
-        getFilterFromStack(updatedTokenizer, foldStack(state.stack))
+        getFilterFromStack(updatedTokenizer, foldStack(state.stack), state.failInfo)
       case Right((updatedTokenizer, Some(token))) =>
         parse(updatedTokenizer, applyTokenToStack(token, state))
     }
   }
 
-  private def getFilterFromStack(tokenizer: Tokenizer, stack: Stack): Either[ParserException, Filter] = {
+  private def getFilterFromStack(
+    tokenizer: Tokenizer,
+    stack: Stack,
+    failInfo: Option[ParserFailure]
+  ): Either[ParserException, Filter] = {
     stack match {
       case Nil =>
-        Left(ParserException(tokenizer.input.position, "Invalid input: empty"))
+        Left(
+          failInfo.fold(ParserException(tokenizer.input.position, "Unknown parsing error"))(f =>
+            ParserException(f.position, f.formatError)
+          )
+        )
       case (filter: Filter) :: Nil =>
         Right(filter)
       case expr1 :: _ =>
