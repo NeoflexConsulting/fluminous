@@ -2,12 +2,13 @@ package org.fluminous.jq.filter.pattern
 
 import cats.Order
 import cats.data.{ NonEmptyList, Validated }
-import org.fluminous.jq.Expression
+import org.fluminous.jq.{ Expression, FoldFunctions }
 import cats.syntax.foldable._
 import org.fluminous.jq.filter.pattern.dsl.{ MatchFailure, MismatchesQty }
-trait ExpressionPattern {
+trait ExpressionPattern extends FoldFunctions {
   def instantiateOnStack(stack: NonEmptyList[Expression]): Validated[PatternFailure, List[Expression]] = {
-    ExpressionCases.cases.foldMapA(p => p.patternCase(stack).leftMap(f => List((p.length, f)))).leftMap(filterRelevant)
+    firstValidOrAllInvalids(ExpressionCases.cases)(p => p.patternCase(stack).leftMap(f => (p.length, f)))
+      .leftMap(filterRelevant)
   }
 
   private def filterRelevant(failures: List[(Int, MatchFailure)]): PatternFailure = {

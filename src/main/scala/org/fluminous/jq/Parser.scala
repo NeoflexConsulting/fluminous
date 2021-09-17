@@ -7,11 +7,9 @@ import org.fluminous.jq.input.InputProvider
 import org.fluminous.jq.tokens.Token
 
 import scala.annotation.tailrec
-import cats.syntax.foldable._
-import cats.instances.list._
 import org.slf4j.LoggerFactory
 
-trait Parser {
+trait Parser extends FoldFunctions {
   private val logger = LoggerFactory.getLogger(getClass)
   type Stack = List[org.fluminous.jq.Expression]
   def parse(input: InputProvider): Either[ParserException, Filter] = {
@@ -53,7 +51,7 @@ trait Parser {
     val newStack = NonEmptyList(token, state.stack)
     logger.debug(printState(newStack, state.failInfo))
     val updatedStackOrErrors =
-      patterns.foldMapA(_.instantiateOnStack(newStack).leftMap(List(_)))
+      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(newStack))
     updatedStackOrErrors
       .leftMap(ParserFailure(_))
       .fold(state.tokenFailed, s => state.tokenSucceed(foldStack(s)))
@@ -64,7 +62,7 @@ trait Parser {
     logger.debug(printStack(stack))
     import ExpressionPattern._
     val updatedStack = NonEmptyList.fromList(stack).flatMap { nonEmptyStack =>
-      patterns.foldMapA(_.instantiateOnStack(nonEmptyStack).leftMap(List(_))).toOption
+      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(nonEmptyStack)).toOption
     }
     updatedStack match {
       case None           => stack
