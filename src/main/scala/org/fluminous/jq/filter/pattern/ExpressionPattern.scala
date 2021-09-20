@@ -2,16 +2,15 @@ package org.fluminous.jq.filter.pattern
 
 import cats.data.{ NonEmptyList, Validated }
 import org.fluminous.jq.{ Expression, FoldFunctions }
-import cats.syntax.foldable._
 import org.fluminous.jq.filter.pattern.dsl.{ MatchFailure, PositionedMatchFailure }
 
 trait ExpressionPattern extends FoldFunctions {
-  def instantiateOnStack(stack: NonEmptyList[Expression]): Validated[Option[PatternFailure], List[Expression]] = {
+  def instantiateOnStack(stack: NonEmptyList[Expression]): Validated[List[PatternFailure], List[Expression]] = {
     firstValidOrAllInvalids(ExpressionCases.cases)(p => p.patternCase(stack).leftMap(f => (p, f)))
-      .leftMap(getRelevant)
+      .leftMap(getPatternFailure)
   }
 
-  private def getRelevant(failures: List[(PatternCase, MatchFailure)]): Option[PatternFailure] = {
+  private def getPatternFailure(failures: List[(PatternCase, MatchFailure)]): List[PatternFailure] = {
     failures.flatMap {
       case (patternCase, p @ PositionedMatchFailure(_, _, _, _, overallMismatchesQty))
           if overallMismatchesQty < patternCase.length =>
@@ -26,9 +25,8 @@ trait ExpressionPattern extends FoldFunctions {
         )
       case _ =>
         None
-    }.maximumByOption(p => (p.failurePosition, -p.mismatchQty))
+    }
   }
-
   protected val ExpressionCases: PatternCases
 }
 
