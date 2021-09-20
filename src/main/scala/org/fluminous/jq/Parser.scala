@@ -34,14 +34,16 @@ trait Parser extends FoldFunctions {
   ): Either[ParserException, Filter] = {
     stack match {
       case Nil =>
-        Left(ParserException(tokenizer.input.position, "Invalid input: empty"))
+        Left(ParserException(tokenizer.input.position, "Input is empty"))
       case (filter: Filter) :: Nil =>
         Right(filter)
-      case _ :: _ =>
+      case expr :: Nil =>
+        Left(ParserException(expr.position, s"Unexpected ${expr.description}"))
+      case expr1 :: _ :: _ =>
         Left(
           failInfo
             .map(_.failure)
-            .fold(ParserException(tokenizer.input.position, "Unknown parsing error"))(f =>
+            .fold(ParserException(expr1.position, s"Unexpected ${expr1.description}"))(f =>
               ParserException(f.failurePosition, f.formatError)
             )
         )

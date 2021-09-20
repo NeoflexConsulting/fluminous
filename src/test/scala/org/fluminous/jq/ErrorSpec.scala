@@ -11,6 +11,9 @@ class ErrorSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wit
         Left(ParserException(38,"Error occurred while parsing json object: Unexpected customerId"))
       )
 
+     parse("{name, age}}")  should be (
+       Left(ParserException(12,"Unexpected }"))
+     )
     }
   }
 }
