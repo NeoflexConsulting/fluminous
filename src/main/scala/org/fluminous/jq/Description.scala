@@ -1,6 +1,5 @@
 package org.fluminous.jq
 
-trait Expression {
-  val position: Int
+trait Description[T <: Expression] {
   val description: String
 }

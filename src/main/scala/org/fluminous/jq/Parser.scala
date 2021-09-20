@@ -1,54 +1,81 @@
 package org.fluminous.jq
 
-import org.fluminous.jq.Expression
+import cats.data.NonEmptyList
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.pattern.ExpressionPattern
 import org.fluminous.jq.input.InputProvider
 import org.fluminous.jq.tokens.Token
-import scala.annotation.tailrec
 import cats.syntax.foldable._
-import cats.instances.list._
+import scala.annotation.tailrec
+import org.slf4j.LoggerFactory
 
-trait Parser {
-  type Stack = List[Expression]
+trait Parser extends FoldFunctions {
+  private val logger = LoggerFactory.getLogger(getClass)
+  type Stack = List[org.fluminous.jq.Expression]
   def parse(input: InputProvider): Either[ParserException, Filter] = {
     parse(Tokenizer(input))
   }
   @tailrec
-  private def parse(tokenizer: Tokenizer, stack: Stack = List.empty): Either[ParserException, Filter] = {
+  private def parse(tokenizer: Tokenizer, state: ParserState = ParserState()): Either[ParserException, Filter] = {
     tokenizer.nextToken match {
       case Left(ex) =>
         Left(ex)
       case Right((updatedTokenizer, None)) =>
-        getFilterFromStack(updatedTokenizer, foldStack(stack))
+        getFilterFromStack(updatedTokenizer, foldStack(state.stack), state.failInfo)
       case Right((updatedTokenizer, Some(token))) =>
-        parse(updatedTokenizer, applyTokenToStack(token, stack))
+        parse(updatedTokenizer, applyTokenToStack(token, state))
     }
   }
 
-  private def getFilterFromStack(tokenizer: Tokenizer, stack: Stack): Either[ParserException, Filter] = {
+  private def getFilterFromStack(
+    tokenizer: Tokenizer,
+    stack: Stack,
+    failInfo: Option[ParserFailure]
+  ): Either[ParserException, Filter] = {
     stack match {
       case Nil =>
-        Left(ParserException(tokenizer.input.position, "Invalid input: empty"))
+        Left(ParserException(tokenizer.input.position, "Input is empty"))
       case (filter: Filter) :: Nil =>
         Right(filter)
-      case expr1 :: _ =>
-        Left(ParserException(tokenizer.input.position, s"Invalid input: $expr1"))
+      case expr :: Nil =>
+        Left(ParserException(expr.position, s"Unexpected ${expr.description}"))
+      case expr1 :: _ :: _ =>
+        Left(
+          failInfo
+            .map(_.failure)
+            .fold(ParserException(expr1.position, s"Unexpected ${expr1.description}"))(f =>
+              ParserException(f.failurePosition, f.formatError)
+            )
+        )
     }
   }
 
-  private def applyTokenToStack(token: Token, stack: Stack): Stack = {
+  private def applyTokenToStack(token: Token, state: ParserState): ParserState = {
     import ExpressionPattern._
-    val newStack = token +: stack
-    patterns.foldMapK(_.instantiateOnStack(newStack)).map(foldStack).getOrElse(newStack)
+    val newStack = NonEmptyList(token, state.stack)
+    val newState = state.copy(stack = newStack.toList)
+    logger.debug(printState(newStack, newState.failInfo))
+    val updatedStackOrErrors =
+      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(newStack)).leftMap(_.flatten)
+    updatedStackOrErrors
+      .fold(newState.tokenFailed, s => newState.tokenSucceed(foldStack(s)))
   }
 
   @tailrec
   private def foldStack(stack: Stack): Stack = {
+    logger.debug(printStack(stack))
     import ExpressionPattern._
-    patterns.foldMapK(_.instantiateOnStack(stack)) match {
+    val updatedStack = NonEmptyList.fromList(stack).flatMap { nonEmptyStack =>
+      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(nonEmptyStack)).toOption
+    }
+    updatedStack match {
       case None           => stack
       case Some(newStack) => foldStack(newStack)
     }
   }
+
+  private def printState(stack: NonEmptyList[Expression], failureInfo: Option[ParserFailure]): String = {
+    stack.toList.mkString("Stack: ", ",", "\n") ++ failureInfo.toString
+  }
+  private def printStack(stack: List[Expression]): String = stack.mkString("Folded stack: ", ",", "")
 }

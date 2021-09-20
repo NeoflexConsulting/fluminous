@@ -19,17 +19,14 @@ object Token {
   private def tokenFromCharacter(c: Char, position: Int): Either[ParserException, Option[Token]] = {
     if (Token.whitespaceSymbols.contains(c)) {
       Right(None)
-    } else if (SpecialSymbol.symbols.contains(c)) Right(SpecialSymbol.symbols.get(c))
-    else if (c == '"') Right(Some(RawString("", false)))
-    else if (c.isDigit) Right(Some(IntegerNumber(c.toString)))
-    else if (c == Root.char) Right(Some(Root))
-    else if (c.isLetter) Right(Some(Identifier(c.toString)))
-    else if (c == '-') Right(Some(IntegerNumber("-")))
+    } else if (SpecialSymbol.symbols.contains(c)) Right(SpecialSymbol.symbols.get(c).map(_(position)))
+    else if (c == '"') Right(Some(RawString(position, "", false)))
+    else if (c.isDigit) Right(Some(IntegerNumber(position, c.toString)))
+    else if (c == Root.char) Right(Some(Root(position)))
+    else if (c.isLetter) Right(Some(Identifier(position, c.toString)))
+    else if (c == '-') Right(Some(IntegerNumber(position, "-")))
     else Left(ParserException(position, s"Unsupported character $c"))
   }
 
   val whitespaceSymbols = Set(' ', '\n', '\r', '\t')
 }
-
-
-

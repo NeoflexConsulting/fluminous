@@ -11,7 +11,8 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.client3" %% "core"                  % "3.3.14",
   "com.softwaremill.sttp.client3" %% "okhttp-backend"        % "3.3.14",
   "com.softwaremill.sttp.client3" %% "circe"                 % "3.3.14",
-  "org.slf4j"                     % "slf4j-api"              % "1.7.32"
+  "org.slf4j"                     % "slf4j-api"              % "1.7.32",
+  "com.chuusai"                   %% "shapeless"             % "2.3.7"
 ) ++ Seq(
   "io.circe" %% "circe-core",
   "io.circe" %% "circe-generic",

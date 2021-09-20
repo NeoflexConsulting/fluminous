@@ -2,17 +2,24 @@ package org.fluminous.jq.filter.pattern
 
 import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.Selector
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, check }
 import org.fluminous.jq.tokens.{ Identifier, Pipe, RawString, Root }
+import shapeless.HNil
+import shapeless.::
 
 case object SelectorPattern extends ExpressionPattern {
-  override val ExpressionCases: PartialFunction[List[Expression], List[Expression]] = {
-    case Identifier(value) :: Root :: rest =>
-      Selector(Seq(value)) :: rest
-    case RawString(value, _) :: Root :: rest =>
-      Selector(Seq(value)) :: rest
-    case Selector(pathChild) :: Selector(pathParent) :: rest =>
-      Selector(pathParent ++ pathChild) :: rest
-    case Selector(pathChild) :: Pipe :: Selector(pathParent) :: rest =>
-      Selector(pathParent ++ pathChild) :: rest
-  }
+  override val ExpressionCases: PatternCases = PatternCases[Selector](
+    (capture[Identifier] ->: check[Root]).ifValidReplaceBy {
+      case id :: HNil => Selector(_, Seq(id.value))
+    },
+    (capture[RawString] ->: check[Root]).ifValidReplaceBy {
+      case s :: HNil => Selector(_, Seq(s.value))
+    },
+    (capture[Selector] ->: capture[Selector]).ifValidReplaceBy {
+      case s1 :: s2 :: HNil => Selector(_, s2.path ++ s1.path)
+    },
+    (capture[Selector] ->: check[Pipe] ->: capture[Selector]).ifValidReplaceBy {
+      case s1 :: s2 :: HNil => Selector(_, s2.path ++ s1.path)
+    }
+  )
 }
