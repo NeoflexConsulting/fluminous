@@ -3,7 +3,6 @@ package org.fluminous.jq.filter.pattern.dsl
 import cats.data.Validated.{ Invalid, Valid }
 import cats.data.{ NonEmptyList, Validated }
 import org.fluminous.jq.filter.pattern.PatternCase
-import org.fluminous.jq.filter.pattern.dsl.MatchFailure.StackIsNotEnough
 import org.fluminous.jq.{ Description, Expression }
 import shapeless.{ HList, HNil }
 
@@ -14,7 +13,10 @@ sealed trait Matcher[Captured <: HList] {
   def ifValidReplaceBy(builder: Captured => (Int => Expression)): PatternCase = {
     PatternCase(
       size,
-      input => stackMatches(input).map { case (position, stack, captured) => builder(captured)(position) +: stack }
+      input =>
+        stackMatches(input).map { matchSuccess =>
+          builder(matchSuccess.capturedVariables)(matchSuccess.patternStartPosition) +: matchSuccess.remainingStack
+        }
     )
   }
 
@@ -24,7 +26,7 @@ sealed trait Matcher[Captured <: HList] {
   def ->:[E <: Expression](left: IsMatcher[E]): CompositeIsMatcher[Captured, E, IsMatcher[E]] =
     new CompositeIsMatcher[Captured, E, IsMatcher[E]](left, this)
 
-  def stackMatches(input: NonEmptyList[Expression]): Validated[MatchFailure, (Int, List[Expression], Captured)]
+  def stackMatches(input: NonEmptyList[Expression]): Validated[MatchFailure, MatchSuccess[Captured]]
   val size: Int
 }
 
@@ -46,23 +48,27 @@ final class CompositeCaptureMatcher[RightCaptured <: HList, E <: Expression, M <
     extends CompositeMatcher[M, RightCaptured, shapeless.::[E, RightCaptured]](left, right) {
   override def stackMatches(
     input: NonEmptyList[Expression]
-  ): Validated[MatchFailure, (Int, List[Expression], shapeless.::[E, RightCaptured])] = {
+  ): Validated[MatchFailure, MatchSuccess[shapeless.::[E, RightCaptured]]] = {
     val leftResult = left.stackMatches(input)
     val rightResult =
       NonEmptyList.fromList(input.tail).map(right.stackMatches(_)).getOrElse(Invalid(StackIsNotEnough))
     (leftResult, rightResult) match {
-      case (Invalid(failure), Valid(_)) =>
-        Invalid(failure.copy(position = input.head.position, overallMismatchesQty = MismatchNumber(1)))
-      case (Valid((_, _, capturedL)), Valid((position, stack, capturedR))) =>
-        Valid((position, stack, shapeless.::(capturedL.head, capturedR)))
-      case (Valid(_), Invalid(failure)) =>
-        if (failure.overallMismatchesQty == CompleteMismatch) {
-          Invalid(failure.copy(overallMismatchesQty = MismatchNumber(right.size)))
-        } else {
-          Invalid(failure)
-        }
-      case (Invalid(_), Invalid(failure)) =>
-        Invalid(failure.copy(overallMismatchesQty = failure.overallMismatchesQty + MismatchNumber(1)))
+      case (Invalid(failure), Valid(success)) =>
+        Invalid(
+          failure.copy(
+            patternStartPosition = success.patternStartPosition,
+            failurePosition = input.head.position,
+            overallMismatchesQty = 1
+          )
+        )
+      case (Valid(MatchSuccess(_, _, capturedL)), Valid(r @ MatchSuccess(_, _, capturedR))) =>
+        Valid(r.copy(capturedVariables = shapeless.::(capturedL.head, capturedR)))
+      case (_, Invalid(StackIsNotEnough)) =>
+        Invalid(StackIsNotEnough)
+      case (Valid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _, _))) =>
+        Invalid(p)
+      case (Invalid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _, _))) =>
+        Invalid(p.copy(overallMismatchesQty = p.overallMismatchesQty + 1))
     }
   }
 }
@@ -72,37 +78,39 @@ final class CompositeIsMatcher[RightCaptured <: HList, E <: Expression, M <: IsM
   right: Matcher[RightCaptured])
     extends CompositeMatcher[M, RightCaptured, RightCaptured](left, right) {
 
-  override def stackMatches(
-    input: NonEmptyList[Expression]
-  ): Validated[MatchFailure, (Int, List[Expression], RightCaptured)] = {
+  override def stackMatches(input: NonEmptyList[Expression]): Validated[MatchFailure, MatchSuccess[RightCaptured]] = {
     val leftResult = left.stackMatches(input)
     val rightResult =
       NonEmptyList.fromList(input.tail).map(right.stackMatches(_)).getOrElse(Invalid(StackIsNotEnough))
     (leftResult, rightResult) match {
-      case (Invalid(failure), Valid(_)) =>
-        Invalid(failure.copy(position = input.head.position, overallMismatchesQty = MismatchNumber(1)))
+      case (Invalid(failure), Valid(success)) =>
+        Invalid(
+          failure.copy(
+            patternStartPosition = success.patternStartPosition,
+            failurePosition = input.head.position,
+            overallMismatchesQty = 1
+          )
+        )
       case (Valid(_), Valid(captured)) =>
         Valid(captured)
-      case (Valid(_), Invalid(failure)) =>
-        if (failure.overallMismatchesQty == CompleteMismatch) {
-          Invalid(failure.copy(overallMismatchesQty = MismatchNumber(right.size)))
-        } else {
-          Invalid(failure)
-        }
-      case (Invalid(_), Invalid(failure)) =>
-        Invalid(failure.copy(overallMismatchesQty = failure.overallMismatchesQty + MismatchNumber(1)))
+      case (_, Invalid(StackIsNotEnough)) =>
+        Invalid(StackIsNotEnough)
+      case (Valid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _, _))) =>
+        Invalid(p)
+      case (Invalid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _, _))) =>
+        Invalid(p.copy(overallMismatchesQty = p.overallMismatchesQty + 1))
     }
   }
 }
 
 final class IsMatcher[E <: Expression: ClassTag: Description](condition: E => Boolean) extends BasicMatcher[E, HNil] {
   private val clazz = implicitly[ClassTag[E]].runtimeClass
-  override def stackMatches(input: NonEmptyList[Expression]): Validated[MatchFailure, (Int, List[Expression], HNil)] = {
+  override def stackMatches(input: NonEmptyList[Expression]): Validated[PositionedMatchFailure, MatchSuccess[HNil]] = {
     input match {
       case NonEmptyList(head: E, tail) if clazz.isInstance(head) && condition(head) =>
-        Valid((head.position, tail, HNil))
+        Valid(MatchSuccess(head.position, tail, HNil))
       case NonEmptyList(head, _) =>
-        Invalid(MatchFailure(head.position, head.description, description, CompleteMismatch))
+        Invalid(PositionedMatchFailure(head.position, head.position, head.description, description, 1))
     }
   }
 }
@@ -112,12 +120,12 @@ final class CapturedMatcher[E <: Expression: ClassTag: Description](condition: E
   private val clazz = implicitly[ClassTag[E]].runtimeClass
   override def stackMatches(
     input: NonEmptyList[Expression]
-  ): Validated[MatchFailure, (Int, List[Expression], shapeless.::[E, HNil])] = {
+  ): Validated[PositionedMatchFailure, MatchSuccess[shapeless.::[E, HNil]]] = {
     input match {
       case NonEmptyList(head, tail) if clazz.isInstance(head) && condition(head.asInstanceOf[E]) =>
-        Valid((head.position, tail, head.asInstanceOf[E] :: HNil))
+        Valid(MatchSuccess(head.position, tail, head.asInstanceOf[E] :: HNil))
       case NonEmptyList(head, _) =>
-        Invalid(MatchFailure(head.position, head.description, description, CompleteMismatch))
+        Invalid(PositionedMatchFailure(head.position, head.position, head.description, description, 1))
     }
   }
 }

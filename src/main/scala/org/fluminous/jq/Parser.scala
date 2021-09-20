@@ -5,7 +5,7 @@ import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.pattern.ExpressionPattern
 import org.fluminous.jq.input.InputProvider
 import org.fluminous.jq.tokens.Token
-
+import cats.syntax.foldable._
 import scala.annotation.tailrec
 import org.slf4j.LoggerFactory
 
@@ -39,8 +39,8 @@ trait Parser extends FoldFunctions {
         Right(filter)
       case _ :: _ =>
         Left(
-          failInfo.fold(ParserException(tokenizer.input.position, "Unknown parsing error"))(f =>
-            ParserException(f.position, f.formatError)
+          failInfo.map(_.failure).fold(ParserException(tokenizer.input.position, "Unknown parsing error"))(f =>
+            ParserException(f.failurePosition, f.formatError)
           )
         )
     }
@@ -52,9 +52,9 @@ trait Parser extends FoldFunctions {
     val newState = state.copy(stack = newStack.toList)
     logger.debug(printState(newStack, newState.failInfo))
     val updatedStackOrErrors =
-      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(newStack)).leftMap(_.filter(_.failures.nonEmpty))
+      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(newStack))
+        .leftMap(_.flatten.maximumByOption(p => (p.failurePosition, -p.mismatchQty)))
     updatedStackOrErrors
-      .leftMap(ParserFailure(_))
       .fold(newState.tokenFailed, s => newState.tokenSucceed(foldStack(s)))
   }
 

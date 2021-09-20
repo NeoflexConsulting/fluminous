@@ -1,33 +1,32 @@
 package org.fluminous.jq.filter.pattern
 
-import cats.Order
 import cats.data.{ NonEmptyList, Validated }
 import org.fluminous.jq.{ Expression, FoldFunctions }
 import cats.syntax.foldable._
-import org.fluminous.jq.filter.pattern.dsl.{ CompleteMismatch, MatchFailure, MismatchesQty }
+import org.fluminous.jq.filter.pattern.dsl.{ MatchFailure, PositionedMatchFailure }
+
 trait ExpressionPattern extends FoldFunctions {
-  def instantiateOnStack(stack: NonEmptyList[Expression]): Validated[PatternFailure, List[Expression]] = {
-    firstValidOrAllInvalids(ExpressionCases.cases)(p => p.patternCase(stack).leftMap(f => (p.length, f)))
-      .leftMap(filterRelevant)
+  def instantiateOnStack(stack: NonEmptyList[Expression]): Validated[Option[PatternFailure], List[Expression]] = {
+    firstValidOrAllInvalids(ExpressionCases.cases)(p => p.patternCase(stack).leftMap(f => (p, f)))
+      .leftMap(getRelevant)
   }
 
-  private def filterRelevant(failures: List[(Int, MatchFailure)]): PatternFailure = {
-    val relevantFailures = failures.filter(_._2.overallMismatchesQty != CompleteMismatch).minimumList
-    val relevantPatternCaseFailures = relevantFailures.map {
-      case (_, matchFailure) => PatternCaseFailure(matchFailure.actualExpression, matchFailure.expectedExpression)
-    }
-    val position         = relevantFailures.map(_._2.position).headOption.getOrElse(1)
-    PatternFailure(ExpressionCases.name, position, relevantPatternCaseFailures)
-  }
-
-  implicit def positionFromStartAndMismatches: Order[(Int, MatchFailure)] = new Order[(Int, MatchFailure)] {
-    override def compare(x: (Int, MatchFailure), y: (Int, MatchFailure)): Int = {
-      val positionResult = implicitly[Order[Int]].compare(x._2.position, y._2.position)
-      if (positionResult != 0)
-        positionResult
-      else
-        implicitly[Order[MismatchesQty]].compare(x._2.overallMismatchesQty, y._2.overallMismatchesQty)
-    }
+  private def getRelevant(failures: List[(PatternCase, MatchFailure)]): Option[PatternFailure] = {
+    failures.flatMap {
+      case (patternCase, p @ PositionedMatchFailure(_, _, _, _, overallMismatchesQty))
+          if overallMismatchesQty < patternCase.length =>
+        Some(
+          PatternFailure(
+            ExpressionCases.name,
+            p.patternStartPosition,
+            p.failurePosition,
+            p.actualExpression,
+            p.overallMismatchesQty
+          )
+        )
+      case _ =>
+        None
+    }.maximumByOption(p => (p.failurePosition, -p.mismatchQty))
   }
 
   protected val ExpressionCases: PatternCases

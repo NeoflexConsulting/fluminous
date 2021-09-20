@@ -1,11 +1,13 @@
 package org.fluminous.jq.filter.pattern.dsl
 
-case class MatchFailure(
-  position: Int,
+trait MatchFailure
+
+case class PositionedMatchFailure(
+  patternStartPosition: Int,
+  failurePosition: Int,
   actualExpression: String,
   expectedExpression: String,
-  overallMismatchesQty: MismatchesQty)
+  overallMismatchesQty: Int)
+    extends MatchFailure
 
-object MatchFailure {
-  def StackIsNotEnough: MatchFailure = MatchFailure(0, "", "", CompleteMismatch)
-}
+case object StackIsNotEnough extends MatchFailure

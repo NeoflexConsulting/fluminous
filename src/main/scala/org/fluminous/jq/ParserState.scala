@@ -1,42 +1,20 @@
 package org.fluminous.jq
 
 import org.fluminous.jq.filter.pattern.PatternFailure
-import cats.syntax.foldable._
 
-case class ParserFailure(failures: Seq[PatternFailure], position: Int) {
-  def mergeWith(parserFailure: ParserFailure): Option[ParserFailure] = {
-    if (position == parserFailure.position) {
-      Some(ParserFailure(failures ++ parserFailure.failures, position))
+case class ParserFailure(failure: PatternFailure, firstFailurePosition: Int) {
+  def mergeWith(newFailure: PatternFailure): Option[ParserFailure] = {
+    if (firstFailurePosition >= newFailure.startPosition && newFailure.failurePosition > failure.failurePosition) {
+      Some(this.copy(failure = newFailure))
     } else {
       None
     }
   }
-  def formatError: String = {
-    val failuresText = failures.map(f =>
-      s" If was supposed ${f.patternName} then expected ${formatExpected(f)}, but found: ${formatActual(f)}."
-    )
-    s"Parsing error at position $position.$failuresText"
-  }
-
-  private def formatActual(f: PatternFailure): String = {
-    f.failures.headOption.map(_.actualExpression).getOrElse("")
-  }
-
-  private def formatExpected(f: PatternFailure): String = {
-    if (f.failures.size == 1)
-      f.failures.head.expectedExpression
-    else
-      s"either ${f.failures.map(_.expectedExpression).mkString(" or ")}"
-  }
-
 }
 
 object ParserFailure {
-  def apply(failures: List[PatternFailure]): Option[ParserFailure] = {
-    val nearestFailures = failures.minimumByList(_.position)
-    nearestFailures.map(_.position).minimumOption.map { min =>
-      ParserFailure(nearestFailures, min)
-    }
+  def apply(failure: PatternFailure): ParserFailure = {
+    ParserFailure(failure, failure.failurePosition)
   }
 }
 
@@ -45,14 +23,14 @@ case class ParserState(stack: List[Expression] = List.empty, failInfo: Option[Pa
     ParserState(updatedStack, None)
   }
 
-  def tokenFailed(parserFailure: Option[ParserFailure]): ParserState = {
-    parserFailure.map(tokenFailed).getOrElse(this)
+  def tokenFailed(patternFailure: Option[PatternFailure]): ParserState = {
+    patternFailure.map(tokenFailed).getOrElse(this)
   }
 
-  def tokenFailed(parserFailure: ParserFailure): ParserState = {
+  def tokenFailed(patternFailure: PatternFailure): ParserState = {
     this.failInfo
-      .fold(this.copy(failInfo = Some(parserFailure))) { failInfo =>
-        failInfo.mergeWith(parserFailure).fold(this)(pf => this.copy(failInfo = Some(pf)))
+      .fold(this.copy(failInfo = Some(ParserFailure(patternFailure)))) { failInfo =>
+        failInfo.mergeWith(patternFailure).fold(this)(pf => this.copy(failInfo = Some(pf)))
       }
   }
 }
