@@ -6,6 +6,6 @@ case class PatternFailure(
   failedExpression: String,
   mismatchQty: Int) {
   def formatError: String = {
-    s"Error occurred while parsing $patternName at position $failurePosition. Unexpected $failedExpression."
+    s"Error occurred while parsing $patternName: Unexpected $failedExpression"
   }
 }
