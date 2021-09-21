@@ -2,7 +2,7 @@ package org.fluminous.jq
 
 import io.circe.Json
 import org.fluminous.jq.filter.{ JsonArrayTemplate, JsonObjectTemplate, Selector }
-import org.fluminous.jq.tokens.Root
+import org.fluminous.jq.tokens.{ DecimalNumber, IntegerNumber, RawString, Root }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -10,6 +10,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll with Parser {
   "Parser" should {
     "parse selectors" in {
+      parse("25") should be(Right(IntegerNumber(1, "25")))
       parse(".") should be(Right(Root(1)))
       parse(".foo") should be(Right(Selector(1, Seq("foo"))))
       parse(".foo.bar") should be(Right(Selector(1, Seq("foo", "bar"))))
@@ -22,7 +23,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonArrayTemplate(
             1,
-            Seq(Right(Selector(2, Seq("foo"))), Right(Selector(8, Seq("bar"))), Right(Selector(14, Seq("baz"))))
+            Seq(Selector(2, Seq("foo")), Selector(8, Seq("bar")), Selector(14, Seq("baz")))
           )
         )
       )
@@ -31,7 +32,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonArrayTemplate(
             1,
-            Seq(Left(Json.fromInt(52)), Left(Json.fromString("hello")), Left(Json.fromBigDecimal(BigDecimal("23.4"))))
+            Seq(IntegerNumber(2, "52"), RawString(6, "hello"), DecimalNumber(15, "23.4"))
           )
         )
       )
@@ -39,14 +40,14 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonObjectTemplate(
             1,
-            Map("a" -> Left(Json.fromInt(42)), "b" -> Left(Json.fromBigDecimal(BigDecimal("17.4"))))
+            Map("a" -> IntegerNumber(7, "42"), "b" -> DecimalNumber(16, "17.4"))
           )
         )
       )
 
       parse("""{"a": 42, "b": .foo}""") should be(
         Right(
-          JsonObjectTemplate(1, Map("a" -> Left(Json.fromInt(42)), "b" -> Right(Selector(16, Seq("foo")))))
+          JsonObjectTemplate(1, Map("a" -> IntegerNumber(7, "42"), "b" -> Selector(16, Seq("foo"))))
         )
       )
 
@@ -54,7 +55,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonObjectTemplate(
             1,
-            Map("a" -> Left(Json.fromInt(42)), "b" -> Left(Json.fromBigDecimal(BigDecimal("17.4"))))
+            Map("a" -> IntegerNumber(5, "42"), "b" -> DecimalNumber(12, "17.4"))
           )
         )
       )
@@ -63,12 +64,12 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonObjectTemplate(
             1,
-            Map("user" -> Right(Selector(2, Seq("user"))), "title" -> Right(Selector(8, Seq("title"))))
+            Map("user" -> Selector(2, Seq("user")), "title" -> Selector(8, Seq("title")))
           )
         )
       )
       parse(""" {customer:.}""") should be(
-        Right(JsonObjectTemplate(2, Map("customer" -> Right(Root(12)))))
+        Right(JsonObjectTemplate(2, Map("customer" -> Root(12))))
       )
 
       parse("""{customer: {id : .customerId, name, age}}""") should be(
@@ -76,16 +77,15 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
           JsonObjectTemplate(
             1,
             Map(
-              "customer" -> Right(
+              "customer" ->
                 JsonObjectTemplate(
                   12,
                   Map(
-                    "id"   -> Right(Selector(18, Seq("customerId"))),
-                    "name" -> Right(Selector(31, Seq("name"))),
-                    "age"  -> Right(Selector(37, Seq("age")))
+                    "id"   -> Selector(18, Seq("customerId")),
+                    "name" -> Selector(31, Seq("name")),
+                    "age"  -> Selector(37, Seq("age"))
                   )
                 )
-              )
             )
           )
         )

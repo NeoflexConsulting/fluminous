@@ -8,6 +8,13 @@ import io.circe.parser._
 class FilterSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
   "Filters" should {
     "select from json" in {
+
+      checkFilter(
+        "25",
+        """{"foo":{"bar":{"baz":25,"sd":"hello"}},"d":14.0}""",
+        """25"""
+      )
+
       checkFilter(
         ".",
         """{"foo":{"bar":{"baz":25,"sd":"hello"}},"d":14.0}""",

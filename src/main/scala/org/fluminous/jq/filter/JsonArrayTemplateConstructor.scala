@@ -3,7 +3,7 @@ package org.fluminous.jq.filter
 import io.circe.Json
 import org.fluminous.jq.{ Description, Expression }
 
-final case class JsonArrayTemplateConstructor(override val position: Int, values: Seq[Either[Json, Filter]])
+final case class JsonArrayTemplateConstructor(override val position: Int, values: Seq[Filter])
     extends Expression {
   override val description: String = JsonArrayTemplateConstructor.typeDescription.description
 }

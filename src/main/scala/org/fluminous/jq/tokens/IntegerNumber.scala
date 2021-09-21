@@ -1,9 +1,11 @@
 package org.fluminous.jq.tokens
 
-import org.fluminous.jq.{ input, Description, ParserException }
-import org.fluminous.jq.input.{ Character, EOF }
+import io.circe.Json
+import org.fluminous.jq.filter.Filter
+import org.fluminous.jq.{Description, ParserException, input}
+import org.fluminous.jq.input.{Character, EOF}
 
-case class IntegerNumber(override val position: Int, value: String) extends Token {
+case class IntegerNumber(override val position: Int, value: String) extends Token with Filter {
   def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, Option[Token]] = {
     symbol match {
       case Character(c) if c.isDigit =>
@@ -21,9 +23,10 @@ case class IntegerNumber(override val position: Int, value: String) extends Toke
 
     }
   }
-  def asInt: Int                   = value.toInt
   override def toString: String    = value
   override val description: String = toString
+
+  override def transform(input: Json): Option[Json] = Some(Json.fromInt(value.toInt))
 }
 
 object IntegerNumber {
