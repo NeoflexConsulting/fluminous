@@ -2,8 +2,8 @@ package org.fluminous.jq.tokens
 
 import io.circe.Json
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.{Description, ParserException, input}
-import org.fluminous.jq.input.{Character, EOF}
+import org.fluminous.jq.{ input, Description, EvaluationException, ParserException }
+import org.fluminous.jq.input.{ Character, EOF }
 
 case class RawString(override val position: Int, value: String, finished: Boolean = true) extends Token with Filter {
   def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, Option[Token]] = {
@@ -20,7 +20,7 @@ case class RawString(override val position: Int, value: String, finished: Boolea
   override def toString: String    = s""""${value}""""
   override val description: String = toString
 
-  override def transform(input: Json): Option[Json] = Some(Json.fromString(value))
+  override def transform(input: Json): Either[EvaluationException, Json] = Right(Json.fromString(value))
 }
 
 object RawString {

@@ -3,7 +3,7 @@ package org.fluminous.jq.filter.json
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{Description, Expression}
 
-final case class JsonArrayUncompleted(override val position: Int, values: Seq[Filter])
+final case class JsonArrayUncompleted(override val position: Int, values: List[Filter])
     extends Expression {
   override val description: String = JsonArrayUncompleted.typeDescription.description
 }

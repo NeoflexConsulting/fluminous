@@ -2,7 +2,7 @@ package org.fluminous.jq.tokens
 
 import io.circe.Json
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.{Description, ParserException, input}
+import org.fluminous.jq.{Description, EvaluationException, ParserException, input}
 import org.fluminous.jq.input.{Character, EOF}
 
 case class IntegerNumber(override val position: Int, value: String) extends Token with Filter {
@@ -26,7 +26,7 @@ case class IntegerNumber(override val position: Int, value: String) extends Toke
   override def toString: String    = value
   override val description: String = toString
 
-  override def transform(input: Json): Option[Json] = Some(Json.fromInt(value.toInt))
+  override def transform(input: Json): Either[EvaluationException,Json] = Right(Json.fromInt(value.toInt))
 }
 
 object IntegerNumber {

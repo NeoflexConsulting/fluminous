@@ -13,7 +13,7 @@ case object JsonArrayTemplatePattern extends ExpressionPattern {
       case s :: js :: HNil => JsonArray(_, (s +: js.values).reverse)
     },
     (check[RightSquareBracket] ->: capture[Filter] ->: check[LeftSquareBracket]).ifValidReplaceBy {
-      case s :: HNil => JsonArray(_, Seq(s))
+      case s :: HNil => JsonArray(_, List(s))
     }
   )
 }

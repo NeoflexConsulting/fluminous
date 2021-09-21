@@ -10,7 +10,7 @@ case object JsonArrayTemplateConstructorPattern extends ExpressionPattern {
 
   override val ExpressionCases: PatternCases = PatternCases[JsonArrayUncompleted](
     (check[Comma] ->: capture[Filter] ->: check[LeftSquareBracket]).ifValidReplaceBy {
-      case filter :: HNil => JsonArrayUncompleted(_, Seq(filter))
+      case filter :: HNil => JsonArrayUncompleted(_, List(filter))
     },
     (check[Comma] ->: capture[Filter] ->: capture[JsonArrayUncompleted]).ifValidReplaceBy {
       case s :: js :: HNil => JsonArrayUncompleted(_, s +: js.values)

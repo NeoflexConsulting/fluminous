@@ -5,6 +5,7 @@ import org.fluminous.jq.{ Expression, FoldFunctions }
 import org.fluminous.jq.filter.pattern.dsl.{ MatchFailure, PositionedMatchFailure }
 
 trait ExpressionPattern extends FoldFunctions {
+
   def instantiateOnStack(stack: NonEmptyList[Expression]): Validated[List[PatternFailure], List[Expression]] = {
     firstValidOrAllInvalids(ExpressionCases.cases)(p => p.patternCase(stack).leftMap(f => (p, f)))
       .leftMap(getPatternFailure)

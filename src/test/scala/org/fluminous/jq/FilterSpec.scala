@@ -3,9 +3,8 @@ package org.fluminous.jq
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import io.circe.parser._
 
-class FilterSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
+class FilterSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll with TestFunctions {
   "Filters" should {
     "select from json" in {
 
@@ -36,7 +35,7 @@ class FilterSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
       checkFilter(
         ".foo.bb",
         """{"foo":{"bar":{"baz":25,"sd":"hello"}},"d":14.0}""",
-        None
+        Left(EvaluationException(1,"Field bb does not exist"))
       )
 
       checkFilter(
@@ -54,7 +53,7 @@ class FilterSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
       checkFilter(
         "[.foo, .bar, .baz]",
         """{"foo":25, "bar": {"baz":25,"sd":"hello"}}""",
-        """[25,{"baz":25,"sd":"hello"}]"""
+        Left(EvaluationException(14,"Field baz does not exist"))
       )
 
       checkFilter(
@@ -86,13 +85,5 @@ class FilterSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
         """{"foo":25, "bar": {"baz":25,"sd":"hello"}}"""
       )
     }
-  }
-
-  private def checkFilter(filter: String, input: String, output: String): Unit =
-    checkFilter(filter, input, Option(output))
-  private def checkFilter(filter: String, input: String, output: Option[String]): Unit = {
-    val json = parse(input).right.get
-    object JqParser extends Parser
-    JqParser.parse(filter).right.get.transform(json) should be(output.map(parse(_).right.get))
   }
 }

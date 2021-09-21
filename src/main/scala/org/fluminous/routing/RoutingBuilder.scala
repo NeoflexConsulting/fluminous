@@ -137,7 +137,7 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
     }
   }
 
-  private def readAction(action: Action, services: Map[String, Service[F]]): Result[Json => F[Option[Json]]] = {
+  private def readAction(action: Action, services: Map[String, Service[F]]): Result[Json => F[Json]] = {
     for {
       arguments    <- readArguments(action)
       functionName = action.getFunctionRef.getRefName
@@ -156,11 +156,11 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
     }
   }
 
-  private def readArguments(action: Action): Result[Map[String, Filter]] = {
+  private def readArguments(action: Action): Result[List[(String, Filter)]] = {
     val entries       = action.getFunctionRef.getArguments.fields().asScala.toList
     val arguments     = entries.map(entry => (entry.getKey, entry.getValue.asText()))
     val parsedFilters = arguments.map { case (name, value) => extractFilter(value).map(f => (name, f)) }.sequence
-    parsedFilters.map(_.toMap)
+    parsedFilters
   }
 
   private def getNextStep(state: OperationState, readySteps: Map[String, Json => F[Json]]): Result[Json => F[Json]] = {

@@ -1,14 +1,15 @@
 package org.fluminous.jq.filter.json
 
 import io.circe.Json
-import org.fluminous.jq.Description
+import org.fluminous.jq.{ Description, EvaluationException }
 import org.fluminous.jq.filter.Filter
+import io.circe.syntax._
+import cats.syntax.traverse._
 
-final case class JsonArray(override val position: Int, values: Seq[Filter]) extends Filter {
-  override def transform(input: Json): Option[Json] = {
-    Option(Json.fromValues(values.flatMap(_.transform(input))))
+final case class JsonArray(override val position: Int, values: List[Filter]) extends Filter {
+  override def transform(input: Json): Either[EvaluationException, Json] = {
+    values.traverse(_.transform(input)).map(_.asJson)
   }
-
   override val description: String = JsonArray.typeDescription.description
 }
 

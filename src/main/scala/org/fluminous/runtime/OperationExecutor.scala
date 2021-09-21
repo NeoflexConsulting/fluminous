@@ -7,17 +7,30 @@ import org.fluminous.jq.filter.Filter
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
+import cats.syntax.monadError._
 
 final case class OperationExecutor[F[_]: MonadThrow](stateName: String, inputFilter: Filter, outputFilter: Filter) {
   private val monadError = MonadThrow[F]
   import monadError._
-  def execute(actions: List[Json => F[Option[Json]]], nextStep: Json => F[Json])(input: Json): F[Json] = {
+  def execute(actions: List[Json => F[Json]], nextStep: Json => F[Json])(input: Json): F[Json] = {
     for {
-      stateJson   <- fromOption(inputFilter.transform(input), InputStateFilterEvaluatedToNull(stateName))
-      mergedJson  <- actions.foldM(stateJson) { case (js, a) => a(js).map(_.map(merge(_, js)).getOrElse(js)) }
-      updatedJson <- fromOption(outputFilter.transform(mergedJson), OutputStateFilterEvaluatedToNull(stateName))
-      result      <- nextStep(updatedJson)
+      stateJson <- fromEither(inputFilter.transform(input)).ensure(InputStateFilterEvaluatedToNull(stateName))(v =>
+                    !v.isNull
+                  )
+      mergedJson <- actions.foldM(stateJson) {
+                     case (js, a) => a(js).map(r => asNonNull(r).map(merge(_, js)).getOrElse(js))
+                   }
+      updatedJson <- fromEither(outputFilter.transform(mergedJson)).ensure(OutputStateFilterEvaluatedToNull(stateName))(
+                      v => !v.isNull
+                    )
+      result <- nextStep(updatedJson)
     } yield result
+  }
+  private def asNonNull(json: Json): Option[Json] = {
+    if (json.isNull)
+      None
+    else
+      Some(json)
   }
 
   private def merge(to: Json, from: Json): Json =

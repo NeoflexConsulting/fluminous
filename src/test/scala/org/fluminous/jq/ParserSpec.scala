@@ -24,7 +24,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonArray(
             1,
-            Seq(Selector(2, Seq("foo")), Selector(8, Seq("bar")), Selector(14, Seq("baz")))
+            List(Selector(2, List("foo")), Selector(8, List("bar")), Selector(14, List("baz")))
           )
         )
       )
@@ -33,7 +33,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonArray(
             1,
-            Seq(IntegerNumber(2, "52"), RawString(6, "hello"), DecimalNumber(15, "23.4"))
+            List(IntegerNumber(2, "52"), RawString(6, "hello"), DecimalNumber(15, "23.4"))
           )
         )
       )
