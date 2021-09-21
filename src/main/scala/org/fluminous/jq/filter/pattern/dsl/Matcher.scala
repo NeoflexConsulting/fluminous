@@ -3,7 +3,7 @@ package org.fluminous.jq.filter.pattern.dsl
 import cats.data.Validated.{ Invalid, Valid }
 import cats.data.{ NonEmptyList, Validated }
 import org.fluminous.jq.filter.pattern.PatternCase
-import org.fluminous.jq.{ Description, Expression }
+import org.fluminous.jq.Expression
 import shapeless.{ HList, HNil }
 
 import scala.reflect.ClassTag
@@ -30,9 +30,8 @@ sealed trait Matcher[Captured <: HList] {
   val size: Int
 }
 
-abstract class BasicMatcher[E <: Expression: Description, Captured <: HList] extends Matcher[Captured] {
-  val description: String = implicitly[Description[E]].description
-  override val size: Int  = 1
+abstract class BasicMatcher[E <: Expression, Captured <: HList] extends Matcher[Captured] {
+  override val size: Int = 1
 }
 
 abstract class CompositeMatcher[M <: BasicMatcher[_, _], RightCaptured <: HList, Captured <: HList](
@@ -65,9 +64,9 @@ final class CompositeCaptureMatcher[RightCaptured <: HList, E <: Expression, M <
         Valid(r.copy(capturedVariables = shapeless.::(capturedL.head, capturedR)))
       case (_, Invalid(StackIsNotEnough)) =>
         Invalid(StackIsNotEnough)
-      case (Valid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _, _))) =>
+      case (Valid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _))) =>
         Invalid(p)
-      case (Invalid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _, _))) =>
+      case (Invalid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _))) =>
         Invalid(p.copy(overallMismatchesQty = p.overallMismatchesQty + 1))
     }
   }
@@ -95,27 +94,27 @@ final class CompositeIsMatcher[RightCaptured <: HList, E <: Expression, M <: IsM
         Valid(captured)
       case (_, Invalid(StackIsNotEnough)) =>
         Invalid(StackIsNotEnough)
-      case (Valid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _, _))) =>
+      case (Valid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _))) =>
         Invalid(p)
-      case (Invalid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _, _))) =>
+      case (Invalid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _))) =>
         Invalid(p.copy(overallMismatchesQty = p.overallMismatchesQty + 1))
     }
   }
 }
 
-final class IsMatcher[E <: Expression: ClassTag: Description](condition: E => Boolean) extends BasicMatcher[E, HNil] {
+final class IsMatcher[E <: Expression: ClassTag](condition: E => Boolean) extends BasicMatcher[E, HNil] {
   private val clazz = implicitly[ClassTag[E]].runtimeClass
   override def stackMatches(input: NonEmptyList[Expression]): Validated[PositionedMatchFailure, MatchSuccess[HNil]] = {
     input match {
       case NonEmptyList(head: E, tail) if clazz.isInstance(head) && condition(head) =>
         Valid(MatchSuccess(head.position, tail, HNil))
       case NonEmptyList(head, _) =>
-        Invalid(PositionedMatchFailure(head.position, head.position, head.description, description, 1))
+        Invalid(PositionedMatchFailure(head.position, head.position, head.description, 1))
     }
   }
 }
 
-final class CapturedMatcher[E <: Expression: ClassTag: Description](condition: E => Boolean)
+final class CapturedMatcher[E <: Expression: ClassTag](condition: E => Boolean)
     extends BasicMatcher[E, shapeless.::[E, HNil]] {
   private val clazz = implicitly[ClassTag[E]].runtimeClass
   override def stackMatches(
@@ -125,19 +124,19 @@ final class CapturedMatcher[E <: Expression: ClassTag: Description](condition: E
       case NonEmptyList(head, tail) if clazz.isInstance(head) && condition(head.asInstanceOf[E]) =>
         Valid(MatchSuccess(head.position, tail, head.asInstanceOf[E] :: HNil))
       case NonEmptyList(head, _) =>
-        Invalid(PositionedMatchFailure(head.position, head.position, head.description, description, 1))
+        Invalid(PositionedMatchFailure(head.position, head.position, head.description, 1))
     }
   }
 }
 
 object Matcher {
-  def check[E <: Expression: ClassTag: Description]: IsMatcher[E] = checkIf[E](_ => true)
+  def check[E <: Expression: ClassTag]: IsMatcher[E] = checkIf[E](_ => true)
 
-  def checkIf[E <: Expression: ClassTag: Description](condition: E => Boolean): IsMatcher[E] =
+  def checkIf[E <: Expression: ClassTag](condition: E => Boolean): IsMatcher[E] =
     new IsMatcher[E](condition)
 
-  def capture[E <: Expression: ClassTag: Description]: CapturedMatcher[E] = captureIf[E](_ => true)
+  def capture[E <: Expression: ClassTag]: CapturedMatcher[E] = captureIf[E](_ => true)
 
-  def captureIf[E <: Expression: ClassTag: Description](condition: E => Boolean): CapturedMatcher[E] =
+  def captureIf[E <: Expression: ClassTag](condition: E => Boolean): CapturedMatcher[E] =
     new CapturedMatcher[E](condition)
 }

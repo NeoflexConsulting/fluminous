@@ -6,7 +6,6 @@ case class PositionedMatchFailure(
   patternStartPosition: Int,
   failurePosition: Int,
   actualExpression: String,
-  expectedExpression: String,
   overallMismatchesQty: Int)
     extends MatchFailure
 
