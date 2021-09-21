@@ -6,7 +6,7 @@ import io.serverlessworkflow.api.actions.Action
 import io.serverlessworkflow.api.interfaces.State
 import io.serverlessworkflow.api.states.{ OperationState, SwitchState }
 import org.fluminous.jq.Parser
-import org.fluminous.jq.filter.{ Filter, IdentityFilter }
+import org.fluminous.jq.filter.{ Filter, Identity }
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
@@ -104,10 +104,10 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
       condition           <- state.getDataConditions.asScala.headOption.toRight(ConditionNotFound(state.getName))
       conditionExpression <- Option(condition.getCondition).toRight(ConditionNotFound(state.getName))
       conditionFilter     <- extractFilter(conditionExpression)
-      inputFilter         <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(IdentityFilter))
+      inputFilter         <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(Identity))
       outputFilter <- asOption(state.getStateDataFilter)(_.getOutput)
                        .map(extractFilter)
-                       .getOrElse(Right(IdentityFilter))
+                       .getOrElse(Right(Identity))
       ifTrueStep <- readySteps
                      .get(condition.getTransition.getNextState)
                      .toRight(InvalidStateReference(state.getName, condition.getTransition.getNextState))
@@ -127,10 +127,10 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
   ): Result[(String, Json => F[Json])] = {
     for {
       actions     <- Option(state.getActions).map(_.asScala.toList).toList.flatten.traverse(readAction(_, services))
-      inputFilter <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(IdentityFilter))
+      inputFilter <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(Identity))
       outputFilter <- asOption(state.getStateDataFilter)(_.getOutput)
                        .map(extractFilter)
-                       .getOrElse(Right(IdentityFilter))
+                       .getOrElse(Right(Identity))
       nextStep <- getNextStep(state, readySteps)
     } yield {
       state.getName -> OperationExecutor(state.getName, inputFilter, outputFilter).execute(actions, nextStep) _
@@ -144,13 +144,13 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
       service      <- services.get(functionName).toRight(ServiceNotFoundException(functionName))
       fromStateDataFilter <- asOption(action.getActionDataFilter)(_.getFromStateData)
                               .map(extractFilter)
-                              .getOrElse(Right(IdentityFilter))
+                              .getOrElse(Right(Identity))
       resultsFilter <- asOption(action.getActionDataFilter)(_.getResults)
                         .map(extractFilter)
-                        .getOrElse(Right(IdentityFilter))
+                        .getOrElse(Right(Identity))
       toStateDataFilter <- asOption(action.getActionDataFilter)(_.getToStateData)
                             .map(extractFilter)
-                            .getOrElse(Right(IdentityFilter))
+                            .getOrElse(Right(Identity))
     } yield {
       ActionExecutor(arguments, fromStateDataFilter, resultsFilter, toStateDataFilter).execute(service) _
     }

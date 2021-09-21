@@ -12,7 +12,7 @@ trait ExpressionPattern extends FoldFunctions {
 
   private def getPatternFailure(failures: List[(PatternCase, MatchFailure)]): List[PatternFailure] = {
     failures.flatMap {
-      case (patternCase, p @ PositionedMatchFailure(_, _, _, _, overallMismatchesQty))
+      case (patternCase, p @ PositionedMatchFailure(_, _, _, overallMismatchesQty))
           if overallMismatchesQty < patternCase.length =>
         Some(
           PatternFailure(
