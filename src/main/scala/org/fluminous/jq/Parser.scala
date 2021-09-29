@@ -38,15 +38,21 @@ trait Parser extends FoldFunctions {
       case (filter: Filter) :: Nil =>
         Right(filter)
       case expr :: Nil =>
-        Left(ParserException(expr.position, s"Unexpected ${expr.description}"))
+        checkAgainstEndOfStream(stack)
+          .map(Right(_))
+          .getOrElse(Left(ParserException(expr.position, s"Unexpected ${expr.description}")))
       case expr1 :: _ :: _ =>
-        Left(
-          failInfo
-            .map(_.failure)
-            .fold(ParserException(expr1.position, s"Unexpected ${expr1.description}"))(f =>
-              ParserException(f.failurePosition, f.formatError)
+        checkAgainstEndOfStream(stack)
+          .map(Right(_))
+          .getOrElse(
+            Left(
+              failInfo
+                .map(_.failure)
+                .fold(ParserException(expr1.position, s"Unexpected ${expr1.description}"))(f =>
+                  ParserException(f.failurePosition, f.formatError)
+                )
             )
-        )
+          )
     }
   }
 
@@ -59,6 +65,17 @@ trait Parser extends FoldFunctions {
       firstValidOrAllInvalids(patterns)(_.instantiateOnStack(newStack)).leftMap(_.flatten)
     updatedStackOrErrors
       .fold(newState.tokenFailed, s => newState.tokenSucceed(foldStack(s)))
+  }
+
+  private def checkAgainstEndOfStream(stack: Stack): Option[Filter] = {
+    import ExpressionPattern._
+    firstValidOrAllInvalids(patterns)(_.instantiateOnStack(NonEmptyList(EndOfStream, stack)))
+      .leftMap(_.flatten)
+      .toOption
+      .flatMap {
+        case (filter: Filter) :: Nil => Option(filter)
+        case _                       => None
+      }
   }
 
   @tailrec

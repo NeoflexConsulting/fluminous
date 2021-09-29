@@ -8,9 +8,9 @@ class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterA
   "Filters" should {
     "Evaluate boolean expressions" in {
       checkFilter(
-        "true or false ",
+        "true and false ",
         """{"foo":{"bar":{"baz":25,"sd":"hello"}},"d":14.0}""",
-        """75"""
+        """false"""
       )
 
     }

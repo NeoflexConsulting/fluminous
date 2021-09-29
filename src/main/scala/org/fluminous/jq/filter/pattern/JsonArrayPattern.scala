@@ -7,7 +7,7 @@ import org.fluminous.jq.filter.pattern.dsl.Matcher.{capture, testAndDrop}
 import shapeless.HNil
 import shapeless.::
 
-case object JsonArrayTemplatePattern extends ExpressionPattern {
+case object JsonArrayPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[JsonArray](
     (testAndDrop[RightSquareBracket] ->: capture[Filter] ->: capture[JsonArrayUncompleted]).ifValidReplaceBy {
       case s :: js :: HNil => JsonArray(_, (s +: js.values).reverse)

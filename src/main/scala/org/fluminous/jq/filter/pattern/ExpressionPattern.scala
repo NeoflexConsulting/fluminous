@@ -34,10 +34,12 @@ trait ExpressionPattern extends FoldFunctions {
 object ExpressionPattern {
   val patterns: List[ExpressionPattern] = List(
     SelectorPattern,
+    Algebra,
+    BooleanAlgebra,
     JsonTupleHeaderPattern,
-    JsonObjectTemplatePattern,
-    JsonObjectTemplateConstructorPattern,
-    JsonArrayTemplatePattern,
-    JsonArrayTemplateConstructorPattern
+    JsonObjectPattern,
+    JsonObjectUncompletedPattern,
+    JsonArrayPattern,
+    JsonArrayUncompletedPattern
   )
 }

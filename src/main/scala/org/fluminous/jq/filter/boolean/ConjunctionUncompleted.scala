@@ -3,7 +3,7 @@ package org.fluminous.jq.filter.boolean
 import org.fluminous.jq.{ Description, Expression }
 import org.fluminous.jq.filter.Filter
 
-final case class ConjunctionUncompleted(override val position: Int, values: Seq[Filter]) extends Expression {
+final case class ConjunctionUncompleted(override val position: Int, values: List[Filter]) extends Expression {
   override val description: String = ConjunctionUncompleted.typeDescription.description
 }
 

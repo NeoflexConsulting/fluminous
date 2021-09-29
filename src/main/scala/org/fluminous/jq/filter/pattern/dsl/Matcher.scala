@@ -150,6 +150,11 @@ final class CapturedMatcher[E <: Expression: ClassTag](condition: E => Boolean)
 
 object Matcher {
 
+  def test[E <: Expression: ClassTag]: TestMatcher[E] = testIf[E](_ => true)
+
+  def testIf[E <: Expression: ClassTag](condition: E => Boolean): TestMatcher[E] =
+    new TestMatcher[E](condition)
+
   def testAndDrop[E <: Expression: ClassTag]: DropMatcher[E] = testAndDropIf[E](_ => true)
 
   def testAndDropIf[E <: Expression: ClassTag](condition: E => Boolean): DropMatcher[E] =

@@ -6,7 +6,7 @@ import org.fluminous.jq.filter.json.JsonArrayUncompleted
 import org.fluminous.jq.tokens.{Comma, LeftSquareBracket}
 import shapeless.{::, HNil}
 
-case object JsonArrayTemplateConstructorPattern extends ExpressionPattern {
+case object JsonArrayUncompletedPattern extends ExpressionPattern {
 
   override val ExpressionCases: PatternCases = PatternCases[JsonArrayUncompleted](
     (testAndDrop[Comma] ->: capture[Filter] ->: testAndDrop[LeftSquareBracket]).ifValidReplaceBy {

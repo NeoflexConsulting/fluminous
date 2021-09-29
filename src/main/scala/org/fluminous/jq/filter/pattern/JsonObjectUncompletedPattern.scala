@@ -7,7 +7,7 @@ import org.fluminous.jq.filter.pattern.dsl.Matcher.{capture, testAndDrop}
 import shapeless.HNil
 import shapeless.::
 
-case object JsonObjectTemplateConstructorPattern extends ExpressionPattern {
+case object JsonObjectUncompletedPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[JsonObjectUncompleted](
     (testAndDrop[Comma] ->: capture[Filter] ->: capture[JsonTupleHeader] ->: testAndDrop[LeftFigureBracket]).ifValidReplaceBy {
       case s :: jh :: HNil => JsonObjectUncompleted(_, Map(jh.fieldName -> s))
