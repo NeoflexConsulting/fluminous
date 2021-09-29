@@ -41,6 +41,12 @@ trait Parser extends FoldFunctions {
         checkAgainstEndOfStream(stack)
           .map(Right(_))
           .getOrElse(Left(ParserException(expr.position, s"Unexpected ${expr.description}")))
+      case expr1 :: (filter: Filter) :: _ =>
+        checkAgainstEndOfStream(stack)
+          .map(Right(_))
+          .getOrElse(
+            Left(ParserException(expr1.position, s"Unexpected ${expr1.description}"))
+          )
       case expr1 :: _ :: _ =>
         checkAgainstEndOfStream(stack)
           .map(Right(_))
