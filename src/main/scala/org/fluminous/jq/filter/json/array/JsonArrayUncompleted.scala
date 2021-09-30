@@ -1,4 +1,4 @@
-package org.fluminous.jq.filter.json
+package org.fluminous.jq.filter.json.array
 
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{Description, Expression}

@@ -1,9 +1,9 @@
-package org.fluminous.jq.filter.json
+package org.fluminous.jq.filter.json.obj
 
+import cats.syntax.traverse._
 import io.circe.Json
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.{ Description, EvaluationException }
-import cats.syntax.traverse._
+import org.fluminous.jq.{Description, EvaluationException}
 
 case class JsonObject(override val position: Int, values: Map[String, Filter]) extends Filter {
   override def transform(input: Json): Either[EvaluationException, Json] = {

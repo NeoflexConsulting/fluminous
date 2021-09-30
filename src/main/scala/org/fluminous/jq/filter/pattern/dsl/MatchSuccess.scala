@@ -1,10 +1,9 @@
 package org.fluminous.jq.filter.pattern.dsl
 
-import org.fluminous.jq.Expression
+import org.fluminous.jq.{Expression, Tokenizer}
 import shapeless.HList
 
 case class MatchSuccess[Captured <: HList](
   patternStartPosition: Int,
-  topStack: List[Expression],
   bottomStack: List[Expression],
   capturedVariables: Captured)

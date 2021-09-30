@@ -16,6 +16,24 @@ trait FoldFunctions {
     }
   }
 
+  protected def firstValidOrAllInvalids[A, B, C, D](
+    l: List[A],
+    init: D
+  )(
+    f: (A, D) => (D, Validated[B, C])
+  ): (D, Validated[List[B], C]) = {
+    val initialState: Validated[List[B], C] = Invalid(List.empty[B])
+    l.foldLeft((init, initialState)) {
+      case (state, e) =>
+        (state, e) match {
+          case ((d, v @ Valid(_)), _) => (d, v)
+          case ((d, Invalid(t)), el) =>
+            val res = f(el, d)
+            (res._1, res._2.leftMap(_ +: t))
+        }
+    }
+  }
+
   protected def foldBoolean[A, B](
     l: List[A]
   )(

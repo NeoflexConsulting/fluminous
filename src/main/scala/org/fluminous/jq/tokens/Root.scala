@@ -1,11 +1,9 @@
 package org.fluminous.jq.tokens
 
-import io.circe.Json
-import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.{ input, Description, EvaluationException, ParserException }
+import org.fluminous.jq.{ input, Description, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 
-case class Root(override val position: Int) extends BasicToken with Filter {
+case class Root(override val position: Int) extends BasicToken {
   override val char = Root.char
   def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, Option[Token]] = {
     symbol match {
@@ -14,8 +12,6 @@ case class Root(override val position: Int) extends BasicToken with Filter {
       case _              => Right(None)
     }
   }
-
-  override def transform(input: Json): Either[EvaluationException, Json] = Right(input)
   override val description: String                                       = Root.typeDescription.description
 }
 

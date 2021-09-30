@@ -1,7 +1,7 @@
-package org.fluminous.jq.filter.json
+package org.fluminous.jq.filter.json.obj
 
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.{ Description, Expression }
+import org.fluminous.jq.{Description, Expression}
 
 final case class JsonObjectUncompleted(override val position: Int, values: Map[String, Filter])
     extends Expression {

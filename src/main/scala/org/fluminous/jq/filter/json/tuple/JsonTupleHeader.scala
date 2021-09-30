@@ -1,6 +1,6 @@
-package org.fluminous.jq.filter.json
+package org.fluminous.jq.filter.json.tuple
 
-import org.fluminous.jq.{ Description, Expression }
+import org.fluminous.jq.{Description, Expression}
 
 final case class JsonTupleHeader(override val position: Int, fieldName: String) extends Expression {
   override val description: String = JsonTupleHeader.typeDescription.description

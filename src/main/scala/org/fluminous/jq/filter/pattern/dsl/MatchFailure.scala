@@ -1,5 +1,6 @@
 package org.fluminous.jq.filter.pattern.dsl
 
+
 trait MatchFailure
 
 case class PositionedMatchFailure(

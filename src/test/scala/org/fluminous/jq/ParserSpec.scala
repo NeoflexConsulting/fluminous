@@ -1,8 +1,9 @@
 package org.fluminous.jq
 
 import io.circe.Json
-import org.fluminous.jq.filter.Selector
-import org.fluminous.jq.filter.json.{JsonArray, JsonObject}
+import org.fluminous.jq.filter.json.obj.JsonObject
+import org.fluminous.jq.filter.json.array.JsonArray
+import org.fluminous.jq.filter.selector.Selector
 import org.fluminous.jq.tokens.{DecimalNumber, IntegerNumber, RawString, Root}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers

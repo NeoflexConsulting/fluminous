@@ -1,9 +1,9 @@
-package org.fluminous.jq.filter.json
+package org.fluminous.jq.filter.json.array
 
-import io.circe.Json
-import org.fluminous.jq.{ Description, EvaluationException }
-import org.fluminous.jq.filter.Filter
 import cats.syntax.traverse._
+import io.circe.Json
+import org.fluminous.jq.filter.Filter
+import org.fluminous.jq.{Description, EvaluationException}
 
 final case class JsonArray(override val position: Int, values: List[Filter]) extends Filter {
   override def transform(input: Json): Either[EvaluationException, Json] = {

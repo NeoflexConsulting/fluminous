@@ -6,14 +6,44 @@ import org.fluminous.jq.tokens.Token
 
 import scala.annotation.tailrec
 
-case class Tokenizer(input: InputProvider) {
-
+case class Tokenizer(input: InputProvider, buffer: Vector[Token] = Vector.empty) {
   def nextToken: Either[ParserException, (Tokenizer, Option[Token])] = {
-    getNextToken(TokenizerState(input, None)).map(s => (Tokenizer(s._1.input), s._2))
+    takeFromBuffer().getOrElse(
+      getNextToken(TokenizerState(input, None)).map { case (state, token) => (Tokenizer(state.input, buffer), token) }
+    )
+  }
+
+  def lookupToken(index: Int): Either[ParserException, (Tokenizer, Option[Token])] = {
+    buffer
+      .lift(index)
+      .fold {
+        for {
+          (tokenizer, tokens) <- getTokens(buffer.length - index + 1)
+          updatedBuffer       = buffer ++ tokens
+        } yield (Tokenizer(tokenizer.input, updatedBuffer), updatedBuffer.lift(index))
+      } { token =>
+        Right((this, Some(token)))
+      }
   }
 
   def allTokens: Either[ParserException, Seq[Token]] = {
     collectTokens(this, Seq.empty).map(_.reverse)
+  }
+
+  private def getTokens(quantity: Int): Either[ParserException, (Tokenizer, Vector[Token])] = {
+    import cats.syntax.foldable._
+    List.range(0, quantity).foldLeftM((this, Vector.empty[Token])) {
+      case (state, _) =>
+        val (tokenizer, tokens) = state
+        tokenizer.nextToken.map {
+          case (nextTokenizer, token) =>
+            (nextTokenizer, tokens ++ token.toSeq)
+        }
+    }
+  }
+
+  private def takeFromBuffer(): Option[Either[ParserException, (Tokenizer, Option[Token])]] = {
+    buffer.headOption.map(t => Right((Tokenizer(this.input, buffer.tail), Some(t))))
   }
 
   @tailrec

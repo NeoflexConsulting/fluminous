@@ -23,7 +23,8 @@ trait Parser extends FoldFunctions {
       case Right((updatedTokenizer, None)) =>
         getFilterFromStack(updatedTokenizer, foldStack(state.stack), state.failInfo)
       case Right((updatedTokenizer, Some(token))) =>
-        parse(updatedTokenizer, applyTokenToStack(token, state))
+        val (nextTokenizer, nextState) = applyTokenToStack(token, updatedTokenizer, state)
+        parse(nextTokenizer, nextState)
     }
   }
 
@@ -38,62 +39,47 @@ trait Parser extends FoldFunctions {
       case (filter: Filter) :: Nil =>
         Right(filter)
       case expr :: Nil =>
-        checkAgainstEndOfStream(stack)
-          .map(Right(_))
-          .getOrElse(Left(ParserException(expr.position, s"Unexpected ${expr.description}")))
+        Left(ParserException(expr.position, s"Unexpected ${expr.description}"))
       case expr1 :: (filter: Filter) :: _ =>
-        checkAgainstEndOfStream(stack)
-          .map(Right(_))
-          .getOrElse(
-            Left(ParserException(expr1.position, s"Unexpected ${expr1.description}"))
-          )
+        Left(ParserException(expr1.position, s"Unexpected ${expr1.description}"))
+
       case expr1 :: _ :: _ =>
-        checkAgainstEndOfStream(stack)
-          .map(Right(_))
-          .getOrElse(
-            Left(
-              failInfo
-                .map(_.failure)
-                .fold(ParserException(expr1.position, s"Unexpected ${expr1.description}"))(f =>
-                  ParserException(f.failurePosition, f.formatError)
-                )
+        Left(
+          failInfo
+            .map(_.failure)
+            .fold(ParserException(expr1.position, s"Unexpected ${expr1.description}"))(f =>
+              ParserException(f.failurePosition, f.formatError)
             )
-          )
+        )
     }
   }
 
-  private def applyTokenToStack(token: Token, state: ParserState): ParserState = {
+  private def applyTokenToStack(token: Token, tokenizer: Tokenizer, state: ParserState): (Tokenizer, ParserState) = {
     import ExpressionPattern._
     val newStack = NonEmptyList(token, state.stack)
     val newState = state.copy(stack = newStack.toList)
     logger.debug(printState(newStack, newState.failInfo))
-    val updatedStackOrErrors =
-      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(newStack)).leftMap(_.flatten)
-    updatedStackOrErrors
-      .fold(newState.tokenFailed, s => newState.tokenSucceed(foldStack(s)))
-  }
+    val (nextTokenizer, res) =
+      firstValidOrAllInvalids(patterns, tokenizer)((a, d) => a.instantiateOnStack(d, newStack))
+    val flattenedRes = res.leftMap(_.flatten)
+    if (flattenedRes.isInvalid) {
+      (nextTokenizer,newState.tokenFailed(flattenedRes.))
+    }
+      .fold((, s => newState.tokenSucceed(foldStack(nextTokenizer, s)))
 
-  private def checkAgainstEndOfStream(stack: Stack): Option[Filter] = {
-    import ExpressionPattern._
-    firstValidOrAllInvalids(patterns)(_.instantiateOnStack(NonEmptyList(EndOfStream, stack)))
-      .leftMap(_.flatten)
-      .toOption
-      .flatMap {
-        case (filter: Filter) :: Nil => Option(filter)
-        case _                       => None
-      }
   }
 
   @tailrec
-  private def foldStack(stack: Stack): Stack = {
+  private def foldStack(tokenizer: Tokenizer, stack: Stack): (Tokenizer, Stack) = {
     logger.debug(printStack(stack))
     import ExpressionPattern._
     val updatedStack = NonEmptyList.fromList(stack).flatMap { nonEmptyStack =>
-      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(nonEmptyStack)).toOption
+      val r = firstValidOrAllInvalids(patterns, tokenizer)((a, d) => a.instantiateOnStack(d, nonEmptyStack))
+      r._2.toOption.map((r._1, _))
     }
     updatedStack match {
-      case None           => stack
-      case Some(newStack) => foldStack(newStack)
+      case None                            => (tokenizer, stack)
+      case Some((nextTokenizer, newStack)) => foldStack(nextTokenizer, newStack)
     }
   }
 
