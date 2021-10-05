@@ -3,9 +3,8 @@ package org.fluminous.jq.filter.pattern.dsl
 import cats.data.Validated.{ Invalid, Valid }
 import cats.data.{ NonEmptyList, Validated }
 import org.fluminous.jq.filter.pattern.{ MatcherInput, MatcherOutput, PatternCase }
-import org.fluminous.jq.{ Expression, Tokenizer }
+import org.fluminous.jq.{ Expression, ParserException, Tokenizer }
 import shapeless.{ HList, HNil }
-
 import scala.reflect.ClassTag
 
 case class MatchingResult[+Failure <: MatchFailure, Captured <: HList](
@@ -16,17 +15,19 @@ sealed trait Matcher[+Failure <: MatchFailure, Captured <: HList] {
   def ifValidReplaceBy(builder: Captured => (Int => Expression)): PatternCase = {
     PatternCase(
       size,
-      input => {
-        val matchingResult = stackMatches(input)
-        val matcherResult = matchingResult.result.map { matchSuccess =>
-          builder(matchSuccess.capturedVariables)(matchSuccess.patternStartPosition) +: matchSuccess.bottomStack
+      input =>
+        for {
+          matchingResult <- stackMatches(input)
+        } yield {
+          val matcherResult = matchingResult.result.map { matchSuccess =>
+            builder(matchSuccess.capturedVariables)(matchSuccess.patternStartPosition) +: matchSuccess.bottomStack
+          }
+          MatcherOutput(matchingResult.tokenizer, matcherResult)
         }
-        MatcherOutput(matchingResult.tokenizer, matcherResult)
-      }
     )
   }
 
-  def stackMatches(input: MatcherInput): MatchingResult[Failure, Captured]
+  def stackMatches(input: MatcherInput): Either[ParserException, MatchingResult[Failure, Captured]]
   val size: Int
 }
 
@@ -56,43 +57,58 @@ abstract class CompositeMatcher[
   right: Matcher[MatchFailure, RightCaptured])
     extends Matcher[MatchFailure, Captured] {
 
-  override def stackMatches(input: MatcherInput): MatchingResult[MatchFailure, Captured] = {
-    val MatchingResult(leftTokenizer, leftResult) = left.stackMatches(input)
-    val rightMatcherInput                         = NonEmptyList.fromList(input.stack.tail).map(stack => MatcherInput(leftTokenizer, stack))
-    val MatchingResult(rightTokenizer, rightResult) =
-      rightMatcherInput.map(right.stackMatches).getOrElse(MatchingResult(leftTokenizer, Invalid(StackIsNotEnough)))
-    (leftResult, rightResult) match {
-      case (Invalid(failure), Valid(success)) =>
-        MatchingResult(
-          rightTokenizer,
-          Invalid(
-            failure.copy(
-              patternStartPosition = success.patternStartPosition,
-              failurePosition = input.stack.head.position,
-              overallMismatchesQty = 1
+  override def stackMatches(input: MatcherInput): Either[ParserException, MatchingResult[MatchFailure, Captured]] = {
+    for {
+      leftResult <- checkLeft(input)
+      rightMatcherInput = NonEmptyList
+        .fromList(input.stack.tail)
+        .map(stack => MatcherInput(leftResult.tokenizer, stack))
+      rightResult <- rightMatcherInput
+                      .map(right.stackMatches)
+                      .getOrElse(
+                        Right[ParserException, MatchingResult[MatchFailure, RightCaptured]](
+                          MatchingResult(leftResult.tokenizer, Invalid(StackIsNotEnough))
+                        )
+                      )
+    } yield {
+      (leftResult.result, rightResult.result) match {
+        case (Invalid(failure), Valid(success)) =>
+          MatchingResult(
+            rightResult.tokenizer,
+            Invalid(
+              failure.copy(
+                patternStartPosition = success.patternStartPosition,
+                failurePosition = input.stack.head.position,
+                overallMismatchesQty = 1
+              )
             )
           )
-        )
-      case (Valid(MatchSuccess(_, _, capturedL)), Valid(r @ MatchSuccess(_, _, capturedR))) =>
-        MatchingResult(
-          rightTokenizer,
-          Valid(
-            r.copy(
-              capturedVariables = modifyCaptured(capturedL, capturedR)
+        case (Valid(MatchSuccess(_, _, capturedL)), Valid(r @ MatchSuccess(_, _, capturedR))) =>
+          MatchingResult(
+            rightResult.tokenizer,
+            Valid(
+              r.copy(
+                capturedVariables = modifyCaptured(capturedL, capturedR)
+              )
             )
           )
-        )
-      case (_, Invalid(StackIsNotEnough)) =>
-        MatchingResult(rightTokenizer, Invalid(StackIsNotEnough))
-      case (Valid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _))) =>
-        MatchingResult(rightTokenizer, Invalid(p))
-      case (Invalid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _))) =>
-        MatchingResult(rightTokenizer, Invalid(p.copy(overallMismatchesQty = p.overallMismatchesQty + 1)))
+        case (_, Invalid(StackIsNotEnough)) =>
+          MatchingResult(rightResult.tokenizer, Invalid(StackIsNotEnough))
+        case (Valid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _))) =>
+          MatchingResult(rightResult.tokenizer, Invalid(p))
+        case (Invalid(_), Invalid(p @ PositionedMatchFailure(_, _, _, _))) =>
+          MatchingResult(rightResult.tokenizer, Invalid(p.copy(overallMismatchesQty = p.overallMismatchesQty + 1)))
+      }
     }
   }
 
+  protected def checkLeft(
+    input: MatcherInput
+  ): Either[ParserException, MatchingResult[PositionedMatchFailure, LeftCaptured]] = {
+    left.stackMatches(input)
+  }
+
   protected def modifyCaptured(left: LeftCaptured, right: RightCaptured): Captured
-  protected def modifyTopStack(e: Expression, topStack: List[Expression]): List[Expression]
 
   override val size: Int = right.size + 1
 }
@@ -105,7 +121,6 @@ final class CompositeCaptureMatcher[RightCaptured <: HList, E <: Expression, M <
   protected override def modifyCaptured(l: shapeless.::[E, HNil], r: RightCaptured): shapeless.::[E, RightCaptured] = {
     shapeless.::(l.head, r)
   }
-  protected def modifyTopStack(e: Expression, topStack: List[Expression]): List[Expression] = topStack
 }
 
 final class CompositeTestMatcher[RightCaptured <: HList, E <: Expression, M <: TestMatcher[E]](
@@ -113,8 +128,7 @@ final class CompositeTestMatcher[RightCaptured <: HList, E <: Expression, M <: T
   right: Matcher[MatchFailure, RightCaptured])
     extends CompositeMatcher[E, HNil, RightCaptured, M, RightCaptured](left, right)
     with MatcherOps[MatchFailure, RightCaptured] {
-  protected override def modifyCaptured(l: HNil, r: RightCaptured): RightCaptured           = r
-  protected def modifyTopStack(e: Expression, topStack: List[Expression]): List[Expression] = topStack
+  protected override def modifyCaptured(l: HNil, r: RightCaptured): RightCaptured = r
 }
 
 final class CompositeLookupMatcher[RightCaptured <: HList, E <: Expression, M <: LookupMatcher[E]](
@@ -129,23 +143,31 @@ final class CompositeLookupMatcher[RightCaptured <: HList, E <: Expression, M <:
   ): CompositeLookupMatcher[RightCaptured, E, LookupMatcher[E]] =
     new CompositeLookupMatcher[RightCaptured, E, LookupMatcher[E]](left, this, lookupIndex + 1)
 
-  protected override def modifyCaptured(l: HNil, r: RightCaptured): RightCaptured           = r
-  protected def modifyTopStack(e: Expression, topStack: List[Expression]): List[Expression] = e +: topStack
+  override protected def checkLeft(
+    input: MatcherInput
+  ): Either[ParserException, MatchingResult[PositionedMatchFailure, HNil]] = {
+    left.lookupMatches(input, lookupIndex)
+  }
 
+  protected override def modifyCaptured(l: HNil, r: RightCaptured): RightCaptured = r
 }
 
 final class TestMatcher[E <: Expression: ClassTag](condition: E => Boolean)
     extends BasicMatcher[E, HNil]
     with MatcherOps[PositionedMatchFailure, HNil] {
   private val clazz = implicitly[ClassTag[E]].runtimeClass
-  override def stackMatches(input: MatcherInput): MatchingResult[PositionedMatchFailure, HNil] = {
+  override def stackMatches(
+    input: MatcherInput
+  ): Either[ParserException, MatchingResult[PositionedMatchFailure, HNil]] = {
     input match {
       case MatcherInput(tokenizer, NonEmptyList(head: E, tail)) if clazz.isInstance(head) && condition(head) =>
-        MatchingResult(tokenizer, Valid(MatchSuccess(head.position, tail, HNil)))
+        Right(MatchingResult(tokenizer, Valid(MatchSuccess(head.position, tail, HNil))))
       case MatcherInput(tokenizer, NonEmptyList(head, _)) =>
-        MatchingResult(
-          tokenizer,
-          Invalid(PositionedMatchFailure(head.position, head.position, head.description, 1))
+        Right(
+          MatchingResult(
+            tokenizer,
+            Invalid(PositionedMatchFailure(head.position, head.position, head.description, 1))
+          )
         )
     }
   }
@@ -155,31 +177,56 @@ final class LookupMatcher[E <: Expression: ClassTag](condition: E => Boolean)
     extends BasicMatcher[E, HNil]
     with LookupMatcherOps[PositionedMatchFailure, HNil] {
   private val clazz = implicitly[ClassTag[E]].runtimeClass
-  override def stackMatches(input: MatcherInput): MatchingResult[PositionedMatchFailure, HNil] = {
-    ???
-    /*   input match {
-      case NonEmptyList(head: E, tail) if clazz.isInstance(head) && condition(head) =>
-        Valid(MatchSuccess(head.position, tail, HNil))
-      case NonEmptyList(head, _) =>
-        Invalid(PositionedMatchFailure(head.position, head.position, head.description, 1))
+
+  def lookupMatches(
+    input: MatcherInput,
+    lookupIndex: Int
+  ): Either[ParserException, MatchingResult[PositionedMatchFailure, HNil]] = {
+    input.tokenizer.lookupToken(lookupIndex).map {
+      case (tokenizer, Some(token: E)) if clazz.isInstance(token) && condition(token) =>
+        MatchingResult(tokenizer, Valid(MatchSuccess(token.position, input.stack.toList, HNil)))
+      case (tokenizer, Some(token)) =>
+        MatchingResult(
+          tokenizer,
+          Invalid(PositionedMatchFailure(token.position, token.position, token.description, 1))
+        )
+      case (tokenizer, None) =>
+        MatchingResult(
+          tokenizer,
+          Invalid(
+            PositionedMatchFailure(
+              input.stack.head.position,
+              input.stack.head.position,
+              input.stack.head.description,
+              1
+            )
+          )
+        )
     }
-  }*/
   }
+
+  override def stackMatches(
+    input: MatcherInput
+  ): Either[ParserException, MatchingResult[PositionedMatchFailure, HNil]] = lookupMatches(input, 0)
 }
 
 final class CapturedMatcher[E <: Expression: ClassTag](condition: E => Boolean)
     extends BasicMatcher[E, shapeless.::[E, HNil]]
     with MatcherOps[PositionedMatchFailure, shapeless.::[E, HNil]] {
   private val clazz = implicitly[ClassTag[E]].runtimeClass
-  override def stackMatches(input: MatcherInput): MatchingResult[PositionedMatchFailure, shapeless.::[E, HNil]] = {
+  override def stackMatches(
+    input: MatcherInput
+  ): Either[ParserException, MatchingResult[PositionedMatchFailure, shapeless.::[E, HNil]]] = {
     input match {
       case MatcherInput(tokenizer, NonEmptyList(head, tail))
           if clazz.isInstance(head) && condition(head.asInstanceOf[E]) =>
-        MatchingResult(tokenizer, Valid(MatchSuccess(head.position, tail, head.asInstanceOf[E] :: HNil)))
+        Right(MatchingResult(tokenizer, Valid(MatchSuccess(head.position, tail, head.asInstanceOf[E] :: HNil))))
       case MatcherInput(tokenizer, NonEmptyList(head, _)) =>
-        MatchingResult(
-          tokenizer,
-          Invalid(PositionedMatchFailure(head.position, head.position, head.description, 1))
+        Right(
+          MatchingResult(
+            tokenizer,
+            Invalid(PositionedMatchFailure(head.position, head.position, head.description, 1))
+          )
         )
     }
   }

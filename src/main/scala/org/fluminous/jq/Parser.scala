@@ -20,8 +20,11 @@ trait Parser extends FoldFunctions {
     tokenizer.nextToken match {
       case Left(ex) =>
         Left(ex)
-      case Right((updatedTokenizer, None)) =>
-        getFilterFromStack(updatedTokenizer, foldStack(state.stack), state.failInfo)
+      case Right((updatedTokenizer, None)) => {
+        val (tokenizerAfterFold, foldedStack) = foldStack(updatedTokenizer, state.stack)
+        getFilterFromStack(tokenizerAfterFold, foldedStack, state.failInfo)
+      }
+
       case Right((updatedTokenizer, Some(token))) =>
         val (nextTokenizer, nextState) = applyTokenToStack(token, updatedTokenizer, state)
         parse(nextTokenizer, nextState)
@@ -62,11 +65,13 @@ trait Parser extends FoldFunctions {
     val (nextTokenizer, res) =
       firstValidOrAllInvalids(patterns, tokenizer)((a, d) => a.instantiateOnStack(d, newStack))
     val flattenedRes = res.leftMap(_.flatten)
-    if (flattenedRes.isInvalid) {
-      (nextTokenizer,newState.tokenFailed(flattenedRes.))
-    }
-      .fold((, s => newState.tokenSucceed(foldStack(nextTokenizer, s)))
-
+    flattenedRes.fold(
+      errors => (nextTokenizer, newState.tokenFailed(errors)),
+      stack => {
+        val (updatedTokenizer, updatedStack) = foldStack(nextTokenizer, stack)
+        (updatedTokenizer, newState.tokenSucceed(updatedStack))
+      }
+    )
   }
 
   @tailrec
