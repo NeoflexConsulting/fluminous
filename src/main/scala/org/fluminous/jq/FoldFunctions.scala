@@ -16,6 +16,27 @@ trait FoldFunctions {
     }
   }
 
+  protected def firstValidOrAllInvalidsWithEither[Input1, Error, Result, Input2, FatalError](
+    l: List[Input1],
+    init: Input2
+  )(
+    f: (Input1, Input2) => Either[FatalError, (Input2, Validated[Error, Result])]
+  ): Either[FatalError, (Input2, Validated[List[Error], Result])] = {
+    val initialState: Either[FatalError, (Input2, Validated[List[Error], Result])] =
+      Right(init, Invalid(List.empty[Error]))
+    l.foldLeft(initialState) {
+      case (state, e) =>
+        (state, e) match {
+          case (Left(ex), _) =>
+            Left(ex)
+          case (Right((d, v @ Valid(_))), _) =>
+            Right((d, v))
+          case (Right((d, Invalid(t))), el) =>
+            f(el, d).map { case (i2, r) => (i2, r.leftMap(_ +: t)) }
+        }
+    }
+  }
+
   protected def firstValidOrAllInvalids[A, B, C, D](
     l: List[A],
     init: D
