@@ -3,8 +3,9 @@ package org.fluminous.jq.filter.pattern.dsl
 import cats.data.Validated.{ Invalid, Valid }
 import cats.data.{ NonEmptyList, Validated }
 import org.fluminous.jq.filter.pattern.{ MatcherInput, MatcherOutput, PatternCase }
-import org.fluminous.jq.{ Expression, ParserException, Tokenizer }
+import org.fluminous.jq.{ EndOfStream, Expression, ParserException, Tokenizer }
 import shapeless.{ HList, HNil }
+
 import scala.reflect.ClassTag
 
 case class MatchingResult[+Failure <: MatchFailure, Captured <: HList](
@@ -204,6 +205,8 @@ final class LookupMatcher[E <: Expression: ClassTag](override val condition: E =
           tokenizer,
           Invalid(PositionedMatchFailure(token.position, token.position, token.description, 1))
         )
+      case (tokenizer, None) if clazz.isInstance(EndOfStream) && condition(EndOfStream.asInstanceOf[E]) =>
+        MatchingResult(tokenizer, Valid(MatchSuccess(tokenizer.input.position, input.stack.toList, HNil)))
       case (tokenizer, None) =>
         MatchingResult(
           tokenizer,

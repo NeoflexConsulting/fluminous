@@ -14,8 +14,8 @@ case object SelectorPattern extends ExpressionPattern {
     (capture[RawString] ->: test[Root]).ifValidReplaceBy {
       case s :: HNil => Selector(_, s.value)
     },
-    (lookup[Expression].notInstance[Identifier].notInstance[RawString] ->: capture[Root]).ifValidReplaceBy {
-      case r :: HNil => IdentitySelector
+    (lookup[Expression].notInstance[Identifier].notInstance[RawString] ->: test[Root]).ifValidReplaceBy { HNil =>
+      IdentitySelector
     }
   )
 }
