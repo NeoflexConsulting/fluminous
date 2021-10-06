@@ -11,7 +11,7 @@ final case class Selector(override val position: Int, field: String) extends Fil
       result     <- jsonObject(field).toRight(EvaluationException(position, s"Field $field does not exist"))
     } yield result
   }
-  override val description: String = s"selector for field: ${field.mkString("\\")}"
+  override val description: String = s"selector for field: $field"
 }
 
 object Selector {

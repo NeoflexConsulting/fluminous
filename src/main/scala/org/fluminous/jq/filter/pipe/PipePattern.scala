@@ -4,11 +4,11 @@ import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, lookup, test }
 import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
-import org.fluminous.jq.tokens.Root
+import org.fluminous.jq.tokens.{ Root, VerticalSlash }
 import shapeless.{ ::, HNil }
 case object PipePattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[Pipe](
-    (test[Pipe] ->: capture[Filter]).ifValidReplaceBy {
+    (test[VerticalSlash] ->: capture[Filter]).ifValidReplaceBy {
       case filter :: HNil => PipeStart(_, List(filter))
     },
     (lookup[Root] ->: capture[Filter]).ifValidReplaceBy {
