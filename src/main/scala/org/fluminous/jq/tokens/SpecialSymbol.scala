@@ -9,7 +9,7 @@ sealed trait SpecialSymbol extends BasicToken {
 
 object SpecialSymbol {
   val symbols: Map[Char, Int => SpecialSymbol] = Map[Char, Int => SpecialSymbol](
-    Pipe.char               -> (Pipe(_)),
+    VerticalSlash.char      -> (VerticalSlash(_)),
     LeftBracket.char        -> (LeftBracket(_)),
     RightBracket.char       -> (RightBracket(_)),
     LeftSquareBracket.char  -> (LeftSquareBracket(_)),
@@ -22,13 +22,13 @@ object SpecialSymbol {
   )
 }
 
-case class Pipe(override val position: Int) extends SpecialSymbol {
-  val char                         = Pipe.char
-  override val description: String = Pipe.typeDescription.description
+case class VerticalSlash(override val position: Int) extends SpecialSymbol {
+  val char                         = VerticalSlash.char
+  override val description: String = VerticalSlash.typeDescription.description
 }
-object Pipe {
+object VerticalSlash {
   val char = '|'
-  implicit def typeDescription: Description[Pipe] = new Description[Pipe] {
+  implicit def typeDescription: Description[VerticalSlash] = new Description[VerticalSlash] {
     override val description: String = char.toString
   }
 }

@@ -2,18 +2,16 @@ package org.fluminous.jq.filter.selector
 
 import io.circe.Json
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.{Description, EvaluationException}
+import org.fluminous.jq.{ Description, EvaluationException }
 
-final case class Selector(override val position: Int, path: String) extends Filter {
+final case class Selector(override val position: Int, field: String) extends Filter {
   override def transform(input: Json): Either[EvaluationException, Json] = {
-    input.asObject match {
-      case None =>
-        Left(EvaluationException(position, s"Field $path is not json object"))
-      case Some(jsonObject) =>
-        jsonObject(path).toRight(EvaluationException(position, s"Field $path does not exist"))
-    }
+    for {
+      jsonObject <- input.asObject.toRight(EvaluationException(position, s"Field $field is not json object"))
+      result     <- jsonObject(field).toRight(EvaluationException(position, s"Field $field does not exist"))
+    } yield result
   }
-  override val description: String = s"selector for path: ${path.mkString("\\")}"
+  override val description: String = s"selector for field: ${field.mkString("\\")}"
 }
 
 object Selector {

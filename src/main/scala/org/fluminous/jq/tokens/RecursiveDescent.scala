@@ -6,7 +6,7 @@ import org.fluminous.jq.input.{ Character, EOF }
 case class RecursiveDescent(override val position: Int) extends Token {
   def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, Option[Token]] = {
     symbol match {
-      case Character(c) if Token.whitespaceSymbols.contains(c) || c == Pipe.char =>
+      case Character(c) if Token.whitespaceSymbols.contains(c) || c == VerticalSlash.char =>
         Right(None)
       case EOF =>
         Right(None)

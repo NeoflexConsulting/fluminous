@@ -7,7 +7,7 @@ import org.fluminous.jq.tokens.{
   IntegerNumber,
   LeftFigureBracket,
   LeftSquareBracket,
-  Pipe,
+  VerticalSlash,
   RawString,
   RecursiveDescent,
   RightFigureBracket,
@@ -35,16 +35,16 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
         Right(Seq(Root(1), Identifier(2, "foo"), Root(5), Identifier(6, "bar")))
       )
       Tokenizer(".foo|.bar").allTokens should be(
-        Right(Seq(Root(1), Identifier(2, "foo"), Pipe(5), Root(6), Identifier(7, "bar")))
+        Right(Seq(Root(1), Identifier(2, "foo"), VerticalSlash(5), Root(6), Identifier(7, "bar")))
       )
       Tokenizer(".foo |.bar").allTokens should be(
-        Right(Seq(Root(1), Identifier(2, "foo"), Pipe(6), Root(7), Identifier(8, "bar")))
+        Right(Seq(Root(1), Identifier(2, "foo"), VerticalSlash(6), Root(7), Identifier(8, "bar")))
       )
       Tokenizer(".foo | .bar").allTokens should be(
-        Right(Seq(Root(1), Identifier(2, "foo"), Pipe(6), Root(8), Identifier(9, "bar")))
+        Right(Seq(Root(1), Identifier(2, "foo"), VerticalSlash(6), Root(8), Identifier(9, "bar")))
       )
       Tokenizer(".foo| .bar").allTokens should be(
-        Right(Seq(Root(1), Identifier(2, "foo"), Pipe(5), Root(7), Identifier(8, "bar")))
+        Right(Seq(Root(1), Identifier(2, "foo"), VerticalSlash(5), Root(7), Identifier(8, "bar")))
       )
       Tokenizer("""."foo$"""").allTokens should be(Right(Seq(Root(1), RawString(2, "foo$"))))
       Tokenizer(""".["foo"]""").allTokens should be(
@@ -167,7 +167,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
         Right(
           Seq(
             RecursiveDescent(1),
-            Pipe(3),
+            VerticalSlash(3),
             Root(4),
             Identifier(5, "a")
           )

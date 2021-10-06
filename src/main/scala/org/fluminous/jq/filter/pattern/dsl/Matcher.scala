@@ -44,6 +44,7 @@ trait MatcherOps[Failure <: MatchFailure, Captured <: HList] extends LookupMatch
 }
 
 abstract class BasicMatcher[E <: Expression, Captured <: HList] extends Matcher[PositionedMatchFailure, Captured] {
+  val condition: E => Boolean
   override val size: Int = 1
 }
 abstract class CompositeMatcher[
@@ -152,10 +153,17 @@ final class CompositeLookupMatcher[RightCaptured <: HList, E <: Expression, M <:
   protected override def modifyCaptured(l: HNil, r: RightCaptured): RightCaptured = r
 }
 
-final class TestMatcher[E <: Expression: ClassTag](condition: E => Boolean)
+final class TestMatcher[E <: Expression: ClassTag](override val condition: E => Boolean)
     extends BasicMatcher[E, HNil]
     with MatcherOps[PositionedMatchFailure, HNil] {
+  self =>
   private val clazz = implicitly[ClassTag[E]].runtimeClass
+
+  def notInstance[G <: Expression: ClassTag]: TestMatcher[E] = {
+    val clazz = implicitly[ClassTag[G]].runtimeClass
+    new TestMatcher[E](e => self.condition(e) && !clazz.isInstance(e))
+  }
+
   override def stackMatches(
     input: MatcherInput
   ): Either[ParserException, MatchingResult[PositionedMatchFailure, HNil]] = {
@@ -173,10 +181,16 @@ final class TestMatcher[E <: Expression: ClassTag](condition: E => Boolean)
   }
 }
 
-final class LookupMatcher[E <: Expression: ClassTag](condition: E => Boolean)
+final class LookupMatcher[E <: Expression: ClassTag](override val condition: E => Boolean)
     extends BasicMatcher[E, HNil]
     with LookupMatcherOps[PositionedMatchFailure, HNil] {
+  self =>
   private val clazz = implicitly[ClassTag[E]].runtimeClass
+
+  def notInstance[G <: Expression: ClassTag]: LookupMatcher[E] = {
+    val clazz = implicitly[ClassTag[G]].runtimeClass
+    new LookupMatcher[E](e => self.condition(e) && !clazz.isInstance(e))
+  }
 
   def lookupMatches(
     input: MatcherInput,
@@ -210,10 +224,17 @@ final class LookupMatcher[E <: Expression: ClassTag](condition: E => Boolean)
   ): Either[ParserException, MatchingResult[PositionedMatchFailure, HNil]] = lookupMatches(input, 0)
 }
 
-final class CapturedMatcher[E <: Expression: ClassTag](condition: E => Boolean)
+final class CapturedMatcher[E <: Expression: ClassTag](override val condition: E => Boolean)
     extends BasicMatcher[E, shapeless.::[E, HNil]]
     with MatcherOps[PositionedMatchFailure, shapeless.::[E, HNil]] {
+  self =>
   private val clazz = implicitly[ClassTag[E]].runtimeClass
+
+  def notInstance[G <: Expression: ClassTag]: CapturedMatcher[E] = {
+    val clazz = implicitly[ClassTag[G]].runtimeClass
+    new CapturedMatcher[E](e => self.condition(e) && !clazz.isInstance(e))
+  }
+
   override def stackMatches(
     input: MatcherInput
   ): Either[ParserException, MatchingResult[PositionedMatchFailure, shapeless.::[E, HNil]]] = {
