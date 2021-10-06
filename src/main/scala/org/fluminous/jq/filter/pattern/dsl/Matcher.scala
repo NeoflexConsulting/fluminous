@@ -21,7 +21,7 @@ sealed trait Matcher[+Failure <: MatchFailure, Captured <: HList] {
           matchingResult <- stackMatches(input)
         } yield {
           val matcherResult = matchingResult.result.map { matchSuccess =>
-            builder(matchSuccess.capturedVariables)(matchSuccess.patternStartPosition) +: matchSuccess.bottomStack
+            builder(matchSuccess.capturedVariables)(matchSuccess.patternStartPosition) +: matchSuccess.stackTail
           }
           MatcherOutput(matchingResult.tokenizer, matcherResult)
         }
@@ -61,9 +61,10 @@ abstract class CompositeMatcher[
 
   override def stackMatches(input: MatcherInput): Either[ParserException, MatchingResult[MatchFailure, Captured]] = {
     for {
-      leftResult <- checkLeft(input)
+      leftResult     <- checkLeft(input)
+      remainingStack = leftResult.result.toOption.map(_.stackTail).getOrElse(input.stack.toList)
       rightMatcherInput = NonEmptyList
-        .fromList(input.stack.tail)
+        .fromList(remainingStack)
         .map(stack => MatcherInput(leftResult.tokenizer, stack))
       rightResult <- rightMatcherInput
                       .map(right.stackMatches)
