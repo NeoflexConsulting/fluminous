@@ -10,6 +10,26 @@ import shapeless.{ ::, HNil }
 
 case object JsonObjectPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[JsonObject](
+    (test[Comma] ->: capture[Filter] ->: capture[JsonTupleHeader] ->: test[LeftFigureBracket]).ifValidReplaceBy {
+      case s :: jh :: HNil => JsonObjectStart(_, Map(jh.fieldName -> s))
+    },
+    (test[Comma] ->: capture[Identifier] ->: test[LeftFigureBracket]).ifValidReplaceBy {
+      case id :: HNil => JsonObjectStart(_, Map(id.value -> Selector(id.position, id.value)))
+    },
+    (test[Comma] ->: capture[RawString] ->: test[LeftFigureBracket]).ifValidReplaceBy {
+      case s :: HNil => JsonObjectStart(_, Map(s.value -> Selector(s.position, s.value)))
+    },
+    (test[Comma] ->: capture[Filter] ->: capture[JsonTupleHeader] ->: capture[JsonObjectStart]).ifValidReplaceBy {
+      case s :: jh :: js :: HNil => JsonObjectStart(_, js.values + (jh.fieldName -> s))
+    },
+    (test[Comma] ->: capture[Identifier] ->: capture[JsonObjectStart]).ifValidReplaceBy {
+      case id :: js :: HNil =>
+        JsonObjectStart(_, js.values + (id.value -> Selector(id.position, id.value)))
+    },
+    (test[Comma] ->: capture[RawString] ->: capture[JsonObjectStart]).ifValidReplaceBy {
+      case s :: js :: HNil =>
+        JsonObjectStart(_, js.values + (s.value -> Selector(s.position, s.value)))
+    },
     (test[RightFigureBracket] ->: capture[Filter] ->: capture[JsonTupleHeader] ->: capture[
       JsonObjectStart
     ]).ifValidReplaceBy {
@@ -32,26 +52,6 @@ case object JsonObjectPattern extends ExpressionPattern {
     },
     (test[RightFigureBracket] ->: capture[RawString] ->: test[LeftFigureBracket]).ifValidReplaceBy {
       case s :: HNil => JsonObject(_, Map(s.value -> Selector(s.position, s.value)))
-    },
-    (test[Comma] ->: capture[Filter] ->: capture[JsonTupleHeader] ->: test[LeftFigureBracket]).ifValidReplaceBy {
-      case s :: jh :: HNil => JsonObjectStart(_, Map(jh.fieldName -> s))
-    },
-    (test[Comma] ->: capture[Identifier] ->: test[LeftFigureBracket]).ifValidReplaceBy {
-      case id :: HNil => JsonObjectStart(_, Map(id.value -> Selector(id.position, id.value)))
-    },
-    (test[Comma] ->: capture[RawString] ->: test[LeftFigureBracket]).ifValidReplaceBy {
-      case s :: HNil => JsonObjectStart(_, Map(s.value -> Selector(s.position, s.value)))
-    },
-    (test[Comma] ->: capture[Filter] ->: capture[JsonTupleHeader] ->: capture[JsonObjectStart]).ifValidReplaceBy {
-      case s :: jh :: js :: HNil => JsonObjectStart(_, js.values + (jh.fieldName -> s))
-    },
-    (test[Comma] ->: capture[Identifier] ->: capture[JsonObjectStart]).ifValidReplaceBy {
-      case id :: js :: HNil =>
-        JsonObjectStart(_, js.values + (id.value -> Selector(id.position, id.value)))
-    },
-    (test[Comma] ->: capture[RawString] ->: capture[JsonObjectStart]).ifValidReplaceBy {
-      case s :: js :: HNil =>
-        JsonObjectStart(_, js.values + (s.value -> Selector(s.position, s.value)))
     }
   )
 }

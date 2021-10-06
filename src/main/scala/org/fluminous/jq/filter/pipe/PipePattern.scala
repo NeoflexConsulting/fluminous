@@ -8,22 +8,22 @@ import org.fluminous.jq.tokens.{ Root, VerticalSlash }
 import shapeless.{ ::, HNil }
 case object PipePattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[Pipe](
-    (test[VerticalSlash] ->: capture[Filter]).ifValidReplaceBy {
-      case filter :: HNil => PipeStart(_, List(filter))
-    },
-    (lookup[Root] ->: capture[Filter]).ifValidReplaceBy {
-      case filter :: HNil => PipeStart(_, List(filter))
-    },
-    (test[Pipe] ->: capture[Filter] ->: capture[PipeStart]).ifValidReplaceBy {
+    (test[VerticalSlash] ->: capture[Filter] ->: capture[PipeStart]).ifValidReplaceBy {
       case filter :: pipe :: HNil => PipeStart(_, filter +: pipe.filters)
     },
     (lookup[Root] ->: capture[Filter] ->: capture[PipeStart]).ifValidReplaceBy {
       case filter :: pipe :: HNil => PipeStart(_, filter +: pipe.filters)
     },
     (lookup[Expression]
-      .notInstance[Pipe]
+      .notInstance[VerticalSlash]
       .notInstance[Root] ->: capture[Filter] ->: capture[PipeStart]).ifValidReplaceBy {
       case filter :: pipe :: HNil => Pipe(_, (filter +: pipe.filters).reverse)
+    },
+    (test[VerticalSlash] ->: capture[Filter]).ifValidReplaceBy {
+      case filter :: HNil => PipeStart(_, List(filter))
+    },
+    (lookup[Root] ->: capture[Filter]).ifValidReplaceBy {
+      case filter :: HNil => PipeStart(_, List(filter))
     }
   )
 
