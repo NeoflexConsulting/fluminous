@@ -1,6 +1,7 @@
 package org.fluminous.jq.filter.pattern
 
 import cats.data.{ NonEmptyList, Validated }
+import org.fluminous.jq.filter.algebra.{ AlgebraExpressionPattern, BooleanConstantPattern }
 import org.fluminous.jq.filter.json.obj.JsonObjectPattern
 import org.fluminous.jq.filter.json.array.JsonArrayPattern
 import org.fluminous.jq.filter.json.tuple.JsonTupleHeaderPattern
@@ -8,7 +9,6 @@ import org.fluminous.jq.{ Expression, FoldFunctions, ParserException, Tokenizer 
 import org.fluminous.jq.filter.pattern.dsl.{ MatchFailure, PositionedMatchFailure }
 import org.fluminous.jq.filter.pipe.PipePattern
 import org.fluminous.jq.filter.selector.SelectorPattern
-//import org.fluminous.jq.filter.selector.SelectorPattern
 
 trait ExpressionPattern extends FoldFunctions {
 
@@ -52,7 +52,7 @@ object ExpressionPattern {
     JsonTupleHeaderPattern,
     JsonObjectPattern,
     JsonArrayPattern,
-    Algebra,
-    BooleanAlgebra
+    BooleanConstantPattern,
+    AlgebraExpressionPattern
   )
 }
