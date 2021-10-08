@@ -2,11 +2,12 @@ package org.fluminous.jq.filter.json.obj
 
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.json.tuple.JsonTupleHeader
-import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, test }
-import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{capture, test}
+import org.fluminous.jq.filter.pattern.{ExpressionPattern, PatternCases}
 import org.fluminous.jq.filter.selector.Selector
-import org.fluminous.jq.tokens.{ Comma, Identifier, LeftFigureBracket, RawString, RightFigureBracket }
-import shapeless.{ ::, HNil }
+import org.fluminous.jq.tokens.symbolic.{Comma, LeftFigureBracket, RightFigureBracket}
+import org.fluminous.jq.tokens.{Identifier, RawString}
+import shapeless.{::, HNil}
 
 case object JsonObjectPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[JsonObject](

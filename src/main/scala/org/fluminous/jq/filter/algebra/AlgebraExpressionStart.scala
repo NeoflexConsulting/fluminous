@@ -4,12 +4,12 @@ import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{ Description, Expression }
 final case class AlgebraExpressionStart(
   override val position: Int,
-  operationSign: OperationSign,
+  operationSign: AlgebraOperation,
   left: Filter,
   right: Filter)
     extends Expression {
 
-  def addFilter(termOperationSign: OperationSign, term: Filter): AlgebraExpressionStart = {
+  def addFilter(termOperationSign: AlgebraOperation, term: Filter): AlgebraExpressionStart = {
     if (this.operationSign.priority >= termOperationSign.priority) {
       AlgebraExpressionStart(position, termOperationSign, AlgebraExpression(position, operationSign, left, right), term)
     } else {

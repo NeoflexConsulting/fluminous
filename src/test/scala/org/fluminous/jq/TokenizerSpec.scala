@@ -1,5 +1,16 @@
 package org.fluminous.jq
-import org.fluminous.jq.tokens.{Colon, Comma, DecimalNumber, Identifier, IntegerNumber, LeftFigureBracket, LeftSquareBracket, RawString, RecursiveDescent, RightFigureBracket, RightSquareBracket, Root, Tokenizer, VerticalSlash}
+import org.fluminous.jq.tokens.symbolic.{
+  Colon,
+  Comma,
+  LeftFigureBracket,
+  LeftSquareBracket,
+  Minus,
+  RightFigureBracket,
+  RightSquareBracket,
+  Root,
+  VerticalSlash
+}
+import org.fluminous.jq.tokens.{ DecimalNumber, Identifier, NaturalNumber, RawString, RecursiveDescent, Tokenizer }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -41,11 +52,11 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
           Seq(
             Root(1),
             LeftSquareBracket(2),
-            IntegerNumber(3, "2"),
+            NaturalNumber(3, "2"),
             RightSquareBracket(4),
             Root(6),
             LeftSquareBracket(7),
-            IntegerNumber(8, "1"),
+            NaturalNumber(8, "1"),
             RightSquareBracket(9)
           )
         )
@@ -56,11 +67,13 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
           Seq(
             Root(1),
             LeftSquareBracket(2),
-            IntegerNumber(3, "-2"),
+            Minus(3),
+            NaturalNumber(4, "2"),
             RightSquareBracket(5),
             Root(7),
             LeftSquareBracket(8),
-            IntegerNumber(9, "-1"),
+            Minus(9),
+            NaturalNumber(10, "1"),
             RightSquareBracket(11)
           )
         )
@@ -71,9 +84,9 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
           Seq(
             Root(1),
             LeftSquareBracket(2),
-            IntegerNumber(3, "10"),
+            NaturalNumber(3, "10"),
             Colon(5),
-            IntegerNumber(6, "15"),
+            NaturalNumber(6, "15"),
             RightSquareBracket(8)
           )
         )
@@ -124,7 +137,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
             LeftFigureBracket(1),
             RawString(2, "a"),
             Colon(5),
-            IntegerNumber(7, "42"),
+            NaturalNumber(7, "42"),
             Comma(9),
             RawString(11, "b"),
             Colon(14),
@@ -140,7 +153,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
             LeftFigureBracket(1),
             Identifier(2, "a"),
             Colon(3),
-            IntegerNumber(5, "42"),
+            NaturalNumber(5, "42"),
             Comma(7),
             Identifier(9, "b"),
             Colon(10),

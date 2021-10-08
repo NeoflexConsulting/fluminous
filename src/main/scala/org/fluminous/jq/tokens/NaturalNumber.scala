@@ -4,15 +4,14 @@ import io.circe.Json
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{Description, EvaluationException, ParserException, input}
 import org.fluminous.jq.input.{Character, EOF}
+import org.fluminous.jq.tokens.symbolic.AtomicToken
 
-case class IntegerNumber(override val position: Int, value: String) extends Token with Filter {
+case class NaturalNumber(override val position: Int, value: String) extends Token with Filter {
   def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, AppendResult] = {
     symbol match {
       case Character(c) if c.isDigit =>
-        Right(TokenUpdated(IntegerNumber(position, value :+ c)))
-      case Character(c) if !c.isDigit && value == "-" =>
-        Left(ParserException(symbolPosition, "Symbol - at invalid position"))
-      case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) =>
+        Right(TokenUpdated(NaturalNumber(position, value :+ c)))
+      case Character(c) if Token.whitespaceSymbols.contains(c) || AtomicToken.symbols.contains(c) =>
         Right(TokenConstructed)
       case c @ Character('.') =>
         Right(TokenUpdated(DecimalNumber(position, value :+ c.c)))
@@ -26,11 +25,11 @@ case class IntegerNumber(override val position: Int, value: String) extends Toke
   override def toString: String    = value
   override val description: String = toString
 
-  override def transform(input: Json): Either[EvaluationException,Json] = Right(Json.fromInt(value.toInt))
+  override def transform(input: Json): Either[EvaluationException, Json] = Right(Json.fromInt(value.toInt))
 }
 
-object IntegerNumber {
-  implicit def typeDescription: Description[IntegerNumber] = new Description[IntegerNumber] {
+object NaturalNumber {
+  implicit def typeDescription: Description[NaturalNumber] = new Description[NaturalNumber] {
     override val description: String = "integer number"
   }
 }

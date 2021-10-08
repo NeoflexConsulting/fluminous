@@ -1,9 +1,10 @@
-package org.fluminous.jq.tokens
+package org.fluminous.jq.tokens.symbolic
 
-import org.fluminous.jq.{ input, Description, ParserException }
-import org.fluminous.jq.input.{ Character, EOF }
+import org.fluminous.jq.input.{Character, EOF}
+import org.fluminous.jq.tokens.{AppendResult, RecursiveDescent, TokenConstructed, TokenUpdated}
+import org.fluminous.jq.{Description, ParserException, input}
 
-case class Root(override val position: Int) extends BasicToken {
+case class Root(override val position: Int) extends SymbolToken {
   override val char = Root.char
   def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, AppendResult] = {
     symbol match {

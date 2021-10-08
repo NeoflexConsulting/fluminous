@@ -1,10 +1,11 @@
 package org.fluminous.jq.filter.selector
 
 import org.fluminous.jq.Expression
-import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, lookup, test }
-import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
-import org.fluminous.jq.tokens.{ Identifier, RawString, Root }
-import shapeless.{ ::, HNil }
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{capture, lookup, test}
+import org.fluminous.jq.filter.pattern.{ExpressionPattern, PatternCases}
+import org.fluminous.jq.tokens.symbolic.Root
+import org.fluminous.jq.tokens.{Identifier, RawString}
+import shapeless.{::, HNil}
 
 case object SelectorPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[Selector](

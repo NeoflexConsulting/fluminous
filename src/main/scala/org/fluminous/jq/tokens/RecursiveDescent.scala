@@ -1,7 +1,8 @@
 package org.fluminous.jq.tokens
 
-import org.fluminous.jq.{ input, Description, ParserException }
-import org.fluminous.jq.input.{ Character, EOF }
+import org.fluminous.jq.{Description, ParserException, input}
+import org.fluminous.jq.input.{Character, EOF}
+import org.fluminous.jq.tokens.symbolic.VerticalSlash
 
 case class RecursiveDescent(override val position: Int) extends Token {
   def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, AppendResult] = {

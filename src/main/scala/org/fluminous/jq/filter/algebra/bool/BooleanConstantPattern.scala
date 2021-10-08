@@ -1,4 +1,4 @@
-package org.fluminous.jq.filter.algebra
+package org.fluminous.jq.filter.algebra.bool
 
 import org.fluminous.jq.filter.pattern.dsl.Matcher.testThat
 import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
