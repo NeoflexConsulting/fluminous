@@ -1,9 +1,8 @@
 package org.fluminous.jq.filter.algebra
 
 import io.circe.{ Json, JsonNumber }
+import org.fluminous.jq.filter.algebra.AlgebraOperation.Zero
 import org.fluminous.jq.{ EvaluationException, Expression }
-import org.fluminous.jq.filter.algebra.bool.Or
-import org.fluminous.jq.filter.algebra.bool.And
 
 trait AlgebraOperation extends Expression {
   val priority: Int
@@ -14,7 +13,7 @@ trait AlgebraOperation extends Expression {
     }
   }
   protected def asNumber(json: Json): Option[JsonNumber] = {
-    json.asNull.fold(json)(_ => json).asNumber
+    json.asNull.fold(json)(_ => Zero).asNumber
   }
 }
 
