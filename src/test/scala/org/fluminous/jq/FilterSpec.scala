@@ -35,7 +35,7 @@ class FilterSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
       checkFilter(
         ".foo.bb",
         """{"foo":{"bar":{"baz":25,"sd":"hello"}},"d":14.0}""",
-        Left(EvaluationException(1,"Field bb does not exist"))
+        Left(EvaluationException(5,"Field bb does not exist"))
       )
 
       checkFilter(
