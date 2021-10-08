@@ -15,6 +15,8 @@ trait TestFunctions extends Matchers {
   protected def checkFilter(filter: String, input: String, output: String): Unit = {
     val json = parse(input).right.get
     object JqParser extends Parser
+    println(JqParser.parse(filter))
+    println(parse(output))
     JqParser.parse(filter).right.get.transform(json) should be(Right(parse(output).right.get))
   }
 }

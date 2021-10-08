@@ -1,10 +1,11 @@
 package org.fluminous.jq.filter.pattern.dsl
 
-import cats.data.Validated.{ Invalid, Valid }
-import cats.data.{ NonEmptyList, Validated }
-import org.fluminous.jq.filter.pattern.{ MatcherInput, MatcherOutput, PatternCase }
-import org.fluminous.jq.{ EndOfStream, Expression, ParserException, Tokenizer }
-import shapeless.{ HList, HNil }
+import cats.data.Validated.{Invalid, Valid}
+import cats.data.{NonEmptyList, Validated}
+import org.fluminous.jq.filter.pattern.{MatcherInput, MatcherOutput, PatternCase}
+import org.fluminous.jq.tokens.Tokenizer
+import org.fluminous.jq.{EndOfStream, Expression, ParserException}
+import shapeless.{HList, HNil}
 
 import scala.reflect.ClassTag
 

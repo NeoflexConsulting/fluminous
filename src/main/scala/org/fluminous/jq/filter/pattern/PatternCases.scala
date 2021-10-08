@@ -1,8 +1,9 @@
 package org.fluminous.jq.filter.pattern
 
-import cats.data.{ NonEmptyList, Validated }
-import org.fluminous.jq.{ Description, Expression, ParserException, Tokenizer }
+import cats.data.{NonEmptyList, Validated}
+import org.fluminous.jq.{Description, Expression, ParserException}
 import org.fluminous.jq.filter.pattern.dsl.MatchFailure
+import org.fluminous.jq.tokens.Tokenizer
 
 case class PatternCases(name: String, cases: List[PatternCase])
 

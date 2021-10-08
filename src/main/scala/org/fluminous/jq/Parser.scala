@@ -4,9 +4,10 @@ import cats.data.NonEmptyList
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.pattern.ExpressionPattern
 import org.fluminous.jq.input.InputProvider
-import org.fluminous.jq.tokens.Token
+import org.fluminous.jq.tokens.{Token, Tokenizer}
 import cats.syntax.foldable._
 import cats.syntax.traverse._
+
 import scala.annotation.tailrec
 import org.slf4j.LoggerFactory
 

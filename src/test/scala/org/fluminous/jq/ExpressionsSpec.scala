@@ -6,6 +6,16 @@ import org.scalatest.wordspec.AnyWordSpecLike
 
 class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll with TestFunctions {
   "Filters" should {
+    "Evaluate arithmetic expressions" in {
+
+      checkFilter(
+        ".a + 1",
+        """{"a": 7}""",
+        """8"""
+      )
+
+    }
+
     "Evaluate boolean expressions" in {
       checkFilter(
         "true and false ",

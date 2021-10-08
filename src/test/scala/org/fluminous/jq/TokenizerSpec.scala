@@ -1,19 +1,5 @@
 package org.fluminous.jq
-import org.fluminous.jq.tokens.{
-  Colon,
-  Comma,
-  DecimalNumber,
-  Identifier,
-  IntegerNumber,
-  LeftFigureBracket,
-  LeftSquareBracket,
-  VerticalSlash,
-  RawString,
-  RecursiveDescent,
-  RightFigureBracket,
-  RightSquareBracket,
-  Root
-}
+import org.fluminous.jq.tokens.{Colon, Comma, DecimalNumber, Identifier, IntegerNumber, LeftFigureBracket, LeftSquareBracket, RawString, RecursiveDescent, RightFigureBracket, RightSquareBracket, Root, Tokenizer, VerticalSlash}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -23,34 +9,34 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
   "Tokenizer" should {
     "split into tokens" in {
       Tokenizer(".").allTokens should be(Right(Seq(Root(1))))
-      Tokenizer(" .").allTokens should be(Right(Seq(Root(2))))
-      Tokenizer(". ").allTokens should be(Right(Seq(Root(1))))
-      Tokenizer(" . ").allTokens should be(Right(Seq(Root(2))))
-      Tokenizer("  .  ").allTokens should be(Right(Seq(Root(3))))
-      Tokenizer(".foo").allTokens should be(Right(Seq(Root(1), Identifier(2, "foo"))))
-      Tokenizer(". foo").allTokens should be(Right(Seq(Root(1), Identifier(3, "foo"))))
-      Tokenizer(". foo ").allTokens should be(Right(Seq(Root(1), Identifier(3, "foo"))))
-      Tokenizer(" . foo ").allTokens should be(Right(Seq(Root(2), Identifier(4, "foo"))))
-      Tokenizer(".foo.bar").allTokens should be(
+      tokens.Tokenizer(" .").allTokens should be(Right(Seq(Root(2))))
+      tokens.Tokenizer(". ").allTokens should be(Right(Seq(Root(1))))
+      tokens.Tokenizer(" . ").allTokens should be(Right(Seq(Root(2))))
+      tokens.Tokenizer("  .  ").allTokens should be(Right(Seq(Root(3))))
+      tokens.Tokenizer(".foo").allTokens should be(Right(Seq(Root(1), Identifier(2, "foo"))))
+      tokens.Tokenizer(". foo").allTokens should be(Right(Seq(Root(1), Identifier(3, "foo"))))
+      tokens.Tokenizer(". foo ").allTokens should be(Right(Seq(Root(1), Identifier(3, "foo"))))
+      tokens.Tokenizer(" . foo ").allTokens should be(Right(Seq(Root(2), Identifier(4, "foo"))))
+      tokens.Tokenizer(".foo.bar").allTokens should be(
         Right(Seq(Root(1), Identifier(2, "foo"), Root(5), Identifier(6, "bar")))
       )
-      Tokenizer(".foo|.bar").allTokens should be(
+      tokens.Tokenizer(".foo|.bar").allTokens should be(
         Right(Seq(Root(1), Identifier(2, "foo"), VerticalSlash(5), Root(6), Identifier(7, "bar")))
       )
-      Tokenizer(".foo |.bar").allTokens should be(
+      tokens.Tokenizer(".foo |.bar").allTokens should be(
         Right(Seq(Root(1), Identifier(2, "foo"), VerticalSlash(6), Root(7), Identifier(8, "bar")))
       )
-      Tokenizer(".foo | .bar").allTokens should be(
+      tokens.Tokenizer(".foo | .bar").allTokens should be(
         Right(Seq(Root(1), Identifier(2, "foo"), VerticalSlash(6), Root(8), Identifier(9, "bar")))
       )
-      Tokenizer(".foo| .bar").allTokens should be(
+      tokens.Tokenizer(".foo| .bar").allTokens should be(
         Right(Seq(Root(1), Identifier(2, "foo"), VerticalSlash(5), Root(7), Identifier(8, "bar")))
       )
-      Tokenizer("""."foo$"""").allTokens should be(Right(Seq(Root(1), RawString(2, "foo$"))))
-      Tokenizer(""".["foo"]""").allTokens should be(
+      tokens.Tokenizer("""."foo$"""").allTokens should be(Right(Seq(Root(1), RawString(2, "foo$"))))
+      tokens.Tokenizer(""".["foo"]""").allTokens should be(
         Right(Seq(Root(1), LeftSquareBracket(2), RawString(3, "foo"), RightSquareBracket(8)))
       )
-      Tokenizer(""".[2] .[1]""").allTokens should be(
+      tokens.Tokenizer(""".[2] .[1]""").allTokens should be(
         Right(
           Seq(
             Root(1),
@@ -65,7 +51,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
         )
       )
 
-      Tokenizer(""".[-2] .[-1]""").allTokens should be(
+      tokens.Tokenizer(""".[-2] .[-1]""").allTokens should be(
         Right(
           Seq(
             Root(1),
@@ -80,7 +66,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
         )
       )
 
-      Tokenizer(""".[10:15]""").allTokens should be(
+      tokens.Tokenizer(""".[10:15]""").allTokens should be(
         Right(
           Seq(
             Root(1),
@@ -93,7 +79,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
         )
       )
 
-      Tokenizer(""".[]""").allTokens should be(
+      tokens.Tokenizer(""".[]""").allTokens should be(
         Right(
           Seq(
             Root(1),
@@ -103,7 +89,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
         )
       )
 
-      Tokenizer(""".foo, .bar""").allTokens should be(
+      tokens.Tokenizer(""".foo, .bar""").allTokens should be(
         Right(
           Seq(
             Root(1),
@@ -115,7 +101,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
         )
       )
 
-      Tokenizer("""[.foo, .bar, .baz]""").allTokens should be(
+      tokens.Tokenizer("""[.foo, .bar, .baz]""").allTokens should be(
         Right(
           Seq(
             LeftSquareBracket(1),
@@ -132,7 +118,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
         )
       )
 
-      Tokenizer("""{"a": 42, "b": 17.5}""").allTokens should be(
+      tokens.Tokenizer("""{"a": 42, "b": 17.5}""").allTokens should be(
         Right(
           Seq(
             LeftFigureBracket(1),
@@ -148,7 +134,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
         )
       )
 
-      Tokenizer("""{a: 42, b: 17.5}""").allTokens should be(
+      tokens.Tokenizer("""{a: 42, b: 17.5}""").allTokens should be(
         Right(
           Seq(
             LeftFigureBracket(1),
@@ -163,7 +149,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
           )
         )
       )
-      Tokenizer("""..|.a""").allTokens should be(
+      tokens.Tokenizer("""..|.a""").allTokens should be(
         Right(
           Seq(
             RecursiveDescent(1),
@@ -174,7 +160,7 @@ class TokenizerSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll
         )
       )
 
-      Tokenizer("""..""").allTokens should be(
+      tokens.Tokenizer("""..""").allTokens should be(
         Right(
           Seq(
             RecursiveDescent(1)

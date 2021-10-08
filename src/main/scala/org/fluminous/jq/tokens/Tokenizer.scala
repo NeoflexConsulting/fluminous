@@ -1,8 +1,8 @@
-package org.fluminous.jq
+package org.fluminous.jq.tokens
 
 import org.fluminous.jq
+import org.fluminous.jq.ParserException
 import org.fluminous.jq.input.{ EOF, InputProvider }
-import org.fluminous.jq.tokens.Token
 
 import scala.annotation.tailrec
 
