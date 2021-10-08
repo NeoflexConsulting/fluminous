@@ -1,9 +1,9 @@
 package org.fluminous.jq.tokens
 
 import org.fluminous.jq.Expression
-import org.fluminous.jq.input.{Character, EOF}
-import org.fluminous.jq.tokens.symbolic.{Greater, Less, Root, AtomicToken}
-import org.fluminous.jq.{ParserException, input}
+import org.fluminous.jq.input.{ Character, EOF }
+import org.fluminous.jq.tokens.symbolic.{ AtomicToken, Greater, Less, Root }
+import org.fluminous.jq.{ input, ParserException }
 
 trait Token extends Expression {
   def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, AppendResult]
@@ -25,7 +25,7 @@ object Token {
     else if (c == '>') Right(Some(Greater(position)))
     else if (c == '<') Right(Some(Less(position)))
     else if (c == '=') Right(Some(Equal(position)))
-    else if (c == '=') Right(Some(NotEqual(position)))
+    else if (c == '!') Right(Some(NotEqual(position)))
     else if (c.isDigit) Right(Some(NaturalNumber(position, c.toString)))
     else if (c == Root.char) Right(Some(Root(position)))
     else if (c.isLetter) Right(Some(Identifier(position, c.toString)))

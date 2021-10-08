@@ -75,6 +75,29 @@ class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterA
       )
     }
 
+    "Evaluate relational expressions" in {
+      checkFilter(
+        """. == 1""",
+        """1""",
+        """true"""
+      )
+      checkFilter(
+        """. == 1""",
+        """2""",
+        """false"""
+      )
+      checkFilter(
+        """. != 1""",
+        """1""",
+        """false"""
+      )
+      checkFilter(
+        """.!=1""",
+        """2""",
+        """true"""
+      )
+    }
+
     "Evaluate boolean expressions" in {
       checkFilter(
         "true and false ",
