@@ -4,14 +4,14 @@ import org.fluminous.jq.{ input, Description, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 
 case class Identifier(override val position: Int, value: String) extends Token {
-  def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, Option[Token]] = {
+  def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, AppendResult] = {
     symbol match {
       case EOF =>
-        Right(None)
+        Right(TokenConstructed)
       case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) || c == Root.char =>
-        Right(None)
+        Right(TokenConstructed)
       case Character(c) =>
-        Right(Some(Identifier(position, value :+ c)))
+        Right(TokenUpdated(Identifier(position, value :+ c)))
     }
   }
   override def toString: String    = value

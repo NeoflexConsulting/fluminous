@@ -5,7 +5,7 @@ import org.fluminous.jq.input.{ Character, EOF }
 import org.fluminous.jq.{ input, ParserException }
 
 trait Token extends Expression {
-  def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, Option[Token]]
+  def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, AppendResult]
 }
 
 object Token {

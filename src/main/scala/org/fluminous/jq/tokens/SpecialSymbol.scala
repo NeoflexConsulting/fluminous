@@ -4,7 +4,7 @@ import org.fluminous.jq.{ input, Description, ParserException }
 
 sealed trait SpecialSymbol extends BasicToken {
   override val char: Char
-  def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, Option[Token]] = Right(None)
+  def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, AppendResult] = Right(TokenConstructed)
 }
 
 object SpecialSymbol {

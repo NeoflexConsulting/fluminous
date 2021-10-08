@@ -6,13 +6,13 @@ import org.fluminous.jq.{ input, Description, EvaluationException, ParserExcepti
 import org.fluminous.jq.input.{ Character, EOF }
 
 case class RawString(override val position: Int, value: String, finished: Boolean = true) extends Token with Filter {
-  def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, Option[Token]] = {
+  def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, AppendResult] = {
     if (finished) {
-      Right(None)
+      Right(TokenConstructed)
     } else {
       symbol match {
-        case Character('"') => Right(Some(RawString(position, value)))
-        case Character(c)   => Right(Some(RawString(position, value :+ c, false)))
+        case Character('"') => Right(TokenUpdated(RawString(position, value)))
+        case Character(c)   => Right(TokenUpdated(RawString(position, value :+ c, false)))
         case EOF            => Left(ParserException(symbolPosition, s"String $value doesn't end with quote"))
       }
     }

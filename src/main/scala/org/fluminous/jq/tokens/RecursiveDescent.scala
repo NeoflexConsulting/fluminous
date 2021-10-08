@@ -4,12 +4,12 @@ import org.fluminous.jq.{ input, Description, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 
 case class RecursiveDescent(override val position: Int) extends Token {
-  def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, Option[Token]] = {
+  def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, AppendResult] = {
     symbol match {
       case Character(c) if Token.whitespaceSymbols.contains(c) || c == VerticalSlash.char =>
-        Right(None)
+        Right(TokenConstructed)
       case EOF =>
-        Right(None)
+        Right(TokenConstructed)
       case Character(c) =>
         Left(ParserException(position, s"""Invalid sequence "..$c""""))
     }

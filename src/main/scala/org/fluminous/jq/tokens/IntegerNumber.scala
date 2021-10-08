@@ -6,18 +6,18 @@ import org.fluminous.jq.{Description, EvaluationException, ParserException, inpu
 import org.fluminous.jq.input.{Character, EOF}
 
 case class IntegerNumber(override val position: Int, value: String) extends Token with Filter {
-  def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, Option[Token]] = {
+  def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, AppendResult] = {
     symbol match {
       case Character(c) if c.isDigit =>
-        Right(Some(IntegerNumber(position, value :+ c)))
+        Right(TokenUpdated(IntegerNumber(position, value :+ c)))
       case Character(c) if !c.isDigit && value == "-" =>
         Left(ParserException(symbolPosition, "Symbol - at invalid position"))
       case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) =>
-        Right(None)
+        Right(TokenConstructed)
       case c @ Character('.') =>
-        Right(Some(DecimalNumber(position, value :+ c.c)))
+        Right(TokenUpdated(DecimalNumber(position, value :+ c.c)))
       case EOF =>
-        Right(None)
+        Right(TokenConstructed)
       case _ =>
         Left(ParserException(symbolPosition, "Identifier could not start with number. Try to surround it by quotes"))
 

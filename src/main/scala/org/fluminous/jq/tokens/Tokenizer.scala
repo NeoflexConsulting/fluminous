@@ -80,8 +80,11 @@ case class Tokenizer(input: InputProvider, buffer: Vector[Token] = Vector.empty)
     token: Token
   ): Either[ParserException, (TokenizerState, Option[Token])] = {
     for {
-      modifiedToken <- token.tryAppend(symbol, state.input.position)
-      newToken      <- modifiedToken.fold(setNewToken(state, symbol, Some(token)))(updateToken(state, _))
+      appendResult <- token.tryAppend(symbol, state.input.position)
+      newToken <- appendResult match {
+                   case TokenUpdated(updatedToken) => updateToken(state, updatedToken)
+                   case TokenConstructed           => setNewToken(state, symbol, Some(token))
+                 }
     } yield {
       newToken
     }
