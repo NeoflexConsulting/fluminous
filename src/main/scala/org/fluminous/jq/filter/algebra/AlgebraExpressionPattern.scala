@@ -3,14 +3,17 @@ package org.fluminous.jq.filter.algebra
 import cats.data.NonEmptyList
 import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.filter.pattern.{ExpressionPattern, PatternCases}
-import org.fluminous.jq.filter.pattern.dsl.Matcher.{capture, captureIf, lookup, test, testThat}
+import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, captureIf, lookup, test, testThat }
 import org.fluminous.jq.tokens.Identifier
-import org.fluminous.jq.tokens.symbolic.{LeftBracket, RightBracket}
-import shapeless.{::, HNil}
+import org.fluminous.jq.tokens.symbolic.{ LeftBracket, RightBracket }
+import shapeless.{ ::, HNil }
 
 case object AlgebraExpressionPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[AlgebraExpression](
+    testThat[Identifier](_.value.toLowerCase == "null").ifValidReplaceBy {
+      case HNil => NullConstant(_)
+    },
     captureIf[Identifier](id => OperationalIdentifier.identifiers.contains(id.value)).ifValidReplaceBy {
       case id :: HNil => OperationalIdentifier(id.value)
     },

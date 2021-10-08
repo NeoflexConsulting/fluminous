@@ -7,10 +7,10 @@ import shapeless.HNil
 
 object BooleanConstantPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[BooleanConstant](
-    testThat[Identifier](_.value == "true").ifValidReplaceBy {
+    testThat[Identifier](_.value.toLowerCase == "true").ifValidReplaceBy {
       case HNil => BooleanConstant(_, true)
     },
-    testThat[Identifier](_.value == "false").ifValidReplaceBy {
+    testThat[Identifier](_.value.toLowerCase == "false").ifValidReplaceBy {
       case HNil => BooleanConstant(_, false)
     }
   )

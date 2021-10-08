@@ -5,7 +5,7 @@ import org.fluminous.jq.filter.algebra.bool.Or
 
 object OperationalIdentifier {
   def apply(identifier: String): Int => AlgebraOperation = {
-    operationalIdentifiers(identifier)
+    operationalIdentifiers(identifier.toLowerCase)
   }
   private val operationalIdentifiers = Map[String, Int => AlgebraOperation](
     "or"  -> Or,

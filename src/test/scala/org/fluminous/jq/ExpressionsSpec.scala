@@ -9,11 +9,70 @@ class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterA
     "Evaluate arithmetic expressions" in {
 
       checkFilter(
+        ".a + 2*4",
+        """{"a": 7}""",
+        """15"""
+      )
+      checkFilter(
+        "(.a + 2)*4",
+        """{"a": 7}""",
+        """36"""
+      )
+      checkFilter(
         ".a + 1",
         """{"a": 7}""",
         """8"""
       )
-
+      checkFilter(
+        ".a + .b",
+        """{"a": [1,2], "b": [3,4]}""",
+        """[1,2,3,4]"""
+      )
+      checkFilter(
+        ".a + null",
+        """{"a": 1}""",
+        """1"""
+      )
+      checkFilter(
+        ".a + 1",
+        """{}""",
+        """1"""
+      )
+      checkFilter(
+        "{a: 1} + {b: 2} + {c: 3} + {a: 42}",
+        """null""",
+        """{"a": 42, "b": 2, "c": 3}"""
+      )
+      checkFilter(
+        "4 - .a",
+        """{"a":3}""",
+        """1"""
+      )
+      checkFilter(
+        """. - ["xml", "yaml"]""",
+        """["xml", "yaml", "json"]""",
+        """["json"]"""
+      )
+      checkFilter(
+        """10 / . * 3""",
+        """5""",
+        """6"""
+      )
+      checkFilter(
+        """10 % . * 3""",
+        """4""",
+        """6"""
+      )
+      checkFilter(
+        """. / ", """",
+        """"a, b,c,d, e"""",
+        """["a","b,c,d","e"]"""
+      )
+      checkFilter(
+        """{"k": {"a": 1, "b": 2}} * {"k": {"a": 0,"c": 3}}""",
+        """"null"""",
+        """{"k": {"a": 0, "b": 2, "c": 3}}"""
+      )
     }
 
     "Evaluate boolean expressions" in {
