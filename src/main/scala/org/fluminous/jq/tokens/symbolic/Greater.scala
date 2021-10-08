@@ -21,7 +21,7 @@ case class Greater(override val position: Int) extends Token with AlgebraOperati
   implicit def typeDescription: Description[Greater] = new Description[Greater] {
     override val description: String = toString
   }
-  override val priority: Int = 0
+  override val priority: Int = 5
   override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
     right.flatMap(greater(left, _))
   }

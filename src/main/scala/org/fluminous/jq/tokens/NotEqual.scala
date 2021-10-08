@@ -23,7 +23,7 @@ case class NotEqual(override val position: Int, isCompleted: Boolean = false) ex
     override val description: String = toString
   }
 
-  override val priority: Int = 0
+  override val priority: Int = 5
   override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
     right.map(notEqual(left, _))
   }

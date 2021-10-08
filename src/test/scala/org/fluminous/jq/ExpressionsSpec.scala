@@ -172,6 +172,18 @@ class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterA
         """{"foo":{"bar":{"baz":true,"sd":false}},"d":true}""",
         """true"""
       )
+
+      checkFilter(
+        ".foo.bar.baz > 3 and .foo.bar.baz < 10",
+        """{"foo":{"bar":{"baz":8,"sd":false}},"d":true}""",
+        """true"""
+      )
+
+      checkFilter(
+        ".foo.bar.baz > 3 and .foo.bar.baz < 10",
+        """{"foo":{"bar":{"baz":12,"sd":false}},"d":true}""",
+        """false"""
+      )
     }
   }
 }

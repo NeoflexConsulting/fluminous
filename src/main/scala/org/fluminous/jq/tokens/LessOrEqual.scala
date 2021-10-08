@@ -14,7 +14,7 @@ case class LessOrEqual(override val position: Int) extends Token with AlgebraOpe
   implicit def typeDescription: Description[LessOrEqual] = new Description[LessOrEqual] {
     override val description: String = toString
   }
-  override val priority: Int = 0
+  override val priority: Int = 5
   override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
     right.flatMap(lessOrEqual(left, _))
   }

@@ -21,7 +21,7 @@ case class Less(override val position: Int) extends Token with AlgebraOperation 
   implicit def typeDescription: Description[Less] = new Description[Less] {
     override val description: String = toString
   }
-  override val priority: Int = 0
+  override val priority: Int = 5
   override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
     right.flatMap(less(left, _))
   }
