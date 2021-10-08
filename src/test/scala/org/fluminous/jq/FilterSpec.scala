@@ -53,7 +53,7 @@ class FilterSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
       checkFilter(
         "[.foo, .bar, .baz]",
         """{"foo":25, "bar": {"baz":25,"sd":"hello"}}""",
-        "[.foo, .bar, null]"
+        """[25, {"baz":25,"sd":"hello"}]"""
       )
 
       checkFilter(

@@ -3,11 +3,11 @@ package org.fluminous.jq.filter.json.array
 import cats.syntax.traverse._
 import io.circe.Json
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.{Description, EvaluationException}
+import org.fluminous.jq.{ Description, EvaluationException }
 
 final case class JsonArray(override val position: Int, values: List[Filter]) extends Filter {
   override def transform(input: Json): Either[EvaluationException, Json] = {
-    values.traverse(_.transform(input)).map(Json.fromValues)
+    values.traverse(_.transform(input)).map(a => Json.fromValues(a.filterNot(_.isNull)))
   }
   override val description: String = JsonArray.typeDescription.description
 }
