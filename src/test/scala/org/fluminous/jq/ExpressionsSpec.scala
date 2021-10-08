@@ -96,6 +96,56 @@ class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterA
         """2""",
         """true"""
       )
+      checkFilter(
+        """. < 5""",
+        """2""",
+        """true"""
+      )
+      checkFilter(
+        """. < 5""",
+        """5""",
+        """false"""
+      )
+      checkFilter(
+        """. <= 5""",
+        """2""",
+        """true"""
+      )
+      checkFilter(
+        """. <= 5""",
+        """5""",
+        """true"""
+      )
+      checkFilter(
+        """. <= 5""",
+        """7""",
+        """false"""
+      )
+      checkFilter(
+        """7 > .""",
+        """5""",
+        """true"""
+      )
+      checkFilter(
+        """7 > .""",
+        """7""",
+        """false"""
+      )
+      checkFilter(
+        """7 >= .""",
+        """5""",
+        """true"""
+      )
+      checkFilter(
+        """7 >= .""",
+        """7""",
+        """true"""
+      )
+      checkFilter(
+        """7 >= .""",
+        """9""",
+        """false"""
+      )
     }
 
     "Evaluate boolean expressions" in {
@@ -117,6 +167,11 @@ class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterA
         """false"""
       )
 
+      checkFilter(
+        ".foo.bar.baz and .d and .foo.bar.sd or .foo.bar.baz",
+        """{"foo":{"bar":{"baz":true,"sd":false}},"d":true}""",
+        """true"""
+      )
     }
   }
 }
