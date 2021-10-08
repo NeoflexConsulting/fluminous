@@ -1,8 +1,7 @@
 package org.fluminous.jq.filter.pattern
 
 import cats.data.{NonEmptyList, Validated}
-import org.fluminous.jq.filter.algebra.AlgebraExpressionPattern
-import org.fluminous.jq.filter.algebra.bool.BooleanConstantPattern
+import org.fluminous.jq.filter.algebra.{AlgebraExpressionPattern, ConstantPattern}
 import org.fluminous.jq.filter.json.obj.JsonObjectPattern
 import org.fluminous.jq.filter.json.array.JsonArrayPattern
 import org.fluminous.jq.filter.json.tuple.JsonTupleHeaderPattern
@@ -49,12 +48,12 @@ trait ExpressionPattern extends FoldFunctions {
 
 object ExpressionPattern {
   val patterns: List[ExpressionPattern] = List(
+    ConstantPattern,
     SelectorPattern,
     PipePattern,
     JsonTupleHeaderPattern,
     JsonObjectPattern,
     JsonArrayPattern,
-    BooleanConstantPattern,
     AlgebraExpressionPattern
   )
 }

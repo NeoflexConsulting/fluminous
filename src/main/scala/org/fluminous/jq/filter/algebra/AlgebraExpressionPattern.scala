@@ -11,9 +11,6 @@ import shapeless.{ ::, HNil }
 
 case object AlgebraExpressionPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[AlgebraExpression](
-    testThat[Identifier](_.value.toLowerCase == "null").ifValidReplaceBy {
-      case HNil => NullConstant(_)
-    },
     captureIf[Identifier](id => OperationalIdentifier.identifiers.contains(id.value)).ifValidReplaceBy {
       case id :: HNil => OperationalIdentifier(id.value)
     },
