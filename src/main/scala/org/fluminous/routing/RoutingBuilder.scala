@@ -126,7 +126,11 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
     readySteps: Map[String, Json => F[Json]]
   ): Result[(String, Json => F[Json])] = {
     for {
-      actions     <- Option(state.getActions).map(_.asScala.toList).toList.flatten.traverse(readAction(_, services))
+      actions <- Option(state.getActions)
+                  .map(_.asScala.toList)
+                  .toList
+                  .flatten
+                  .traverse(readAction(_, state.getName, services))
       inputFilter <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(Identity))
       outputFilter <- asOption(state.getStateDataFilter)(_.getOutput)
                        .map(extractFilter)
@@ -137,7 +141,11 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
     }
   }
 
-  private def readAction(action: Action, services: Map[String, Service[F]]): Result[Json => F[Json]] = {
+  private def readAction(
+    action: Action,
+    stateName: String,
+    services: Map[String, Service[F]]
+  ): Result[Json => F[Json]] = {
     for {
       arguments    <- readArguments(action)
       functionName = action.getFunctionRef.getRefName
@@ -152,7 +160,9 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
                             .map(extractFilter)
                             .getOrElse(Right(Identity))
     } yield {
-      ActionExecutor(arguments, fromStateDataFilter, resultsFilter, toStateDataFilter).execute(service) _
+      ActionExecutor(stateName, functionName, arguments, fromStateDataFilter, resultsFilter, toStateDataFilter).execute(
+        service
+      ) _
     }
   }
 

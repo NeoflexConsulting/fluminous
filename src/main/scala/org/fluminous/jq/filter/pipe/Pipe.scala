@@ -6,9 +6,9 @@ import org.fluminous.jq.{ Description, EvaluationException }
 import cats.syntax.foldable._
 
 final case class Pipe(override val position: Int, filters: List[Filter]) extends Filter {
-  override def transform(input: Json): Either[EvaluationException, Json] = {
+  override def transformSingle(input: Json): Either[EvaluationException, Json] = {
     filters.foldLeftM(input) { (json, filter) =>
-      filter.transform(json)
+      filter.transformSingle(json)
     }
   }
   override val description: String = Pipe.typeDescription.description

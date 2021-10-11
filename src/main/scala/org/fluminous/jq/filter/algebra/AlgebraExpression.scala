@@ -25,10 +25,10 @@ final case class AlgebraExpression(
 
   override val description: String = AlgebraExpression.typeDescription.description
 
-  override def transform(input: Json): Either[EvaluationException, Json] = {
+  override def transformSingle(input: Json): Either[EvaluationException, Json] = {
     for {
-      leftResult <- left.transform(input)
-      result     <- operationSign.execute(leftResult, right.transform(input))
+      leftResult <- left.transformSingle(input)
+      result     <- operationSign.execute(leftResult, right.transformSingle(input))
     } yield result
   }
 }

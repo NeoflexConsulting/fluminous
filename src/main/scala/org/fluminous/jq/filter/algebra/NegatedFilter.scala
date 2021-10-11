@@ -5,7 +5,7 @@ import org.fluminous.jq.{ Description, EvaluationException }
 import org.fluminous.jq.filter.Filter
 
 final case class NegatedFilter(override val position: Int, filter: Filter) extends Filter {
-  override def transform(input: Json): Either[EvaluationException, Json] = {
+  override def transformSingle(input: Json): Either[EvaluationException, Json] = {
     input.asNumber
       .flatMap(_.toBigDecimal.map(d => -d))
       .map(Json.fromBigDecimal)

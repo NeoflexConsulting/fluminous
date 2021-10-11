@@ -6,7 +6,7 @@ import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{ Description, EvaluationException }
 
 final case class Selector(override val position: Int, field: String) extends Filter {
-  override def transform(input: Json): Either[EvaluationException, Json] = {
+  override def transformSingle(input: Json): Either[EvaluationException, Json] = {
     if (input.isNull) {
       Right(input)
     } else {

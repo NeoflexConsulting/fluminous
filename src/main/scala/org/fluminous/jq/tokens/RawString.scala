@@ -20,7 +20,7 @@ case class RawString(override val position: Int, value: String, finished: Boolea
   override def toString: String    = s""""${value}""""
   override val description: String = toString
 
-  override def transform(input: Json): Either[EvaluationException, Json] = Right(Json.fromString(value))
+  override def transformSingle(input: Json): Either[EvaluationException, Json] = Right(Json.fromString(value))
 }
 
 object RawString {

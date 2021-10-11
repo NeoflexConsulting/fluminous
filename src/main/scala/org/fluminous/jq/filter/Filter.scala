@@ -2,9 +2,11 @@ package org.fluminous.jq.filter
 
 import io.circe.Json
 import org.fluminous.jq.{ Description, EvaluationException, Expression }
+import cats.syntax.traverse._
 
 trait Filter extends Expression {
-  def transform(input: Json): Either[EvaluationException, Json]
+  def transform(input: List[Json]): Either[EvaluationException, List[Json]] = input.map(transformSingle).sequence
+  def transformSingle(input: Json): Either[EvaluationException, Json]
 }
 
 object Filter {

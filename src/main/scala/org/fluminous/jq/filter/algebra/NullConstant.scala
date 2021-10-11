@@ -6,7 +6,7 @@ import org.fluminous.jq.{ Description, EvaluationException }
 import org.fluminous.jq.filter.Filter
 
 final case class NullConstant(override val position: Int) extends Filter {
-  override def transform(input: Json): Either[EvaluationException, Json] = Right(Null)
+  override def transformSingle(input: Json): Either[EvaluationException, Json] = Right(Null)
   override val description: String                                       = NullConstant.typeDescription.description
 }
 

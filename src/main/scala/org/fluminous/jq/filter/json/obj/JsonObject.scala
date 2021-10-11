@@ -6,8 +6,8 @@ import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{ Description, EvaluationException }
 
 case class JsonObject(override val position: Int, values: Map[String, Filter]) extends Filter {
-  override def transform(input: Json): Either[EvaluationException, Json] = {
-    values.toList.traverse { case (n, v) => v.transform(input).map(j => (n, j)) }.map(m =>
+  override def transformSingle(input: Json): Either[EvaluationException, Json] = {
+    values.toList.traverse { case (n, v) => v.transformSingle(input).map(j => (n, j)) }.map(m =>
       Json.fromFields(m.filterNot(_._2.isNull))
     )
   }

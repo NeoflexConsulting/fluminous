@@ -9,20 +9,23 @@ import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.monadError._
 
-final case class OperationExecutor[F[_]: MonadThrow](stateName: String, inputFilter: Filter, outputFilter: Filter) {
+final case class OperationExecutor[F[_]: MonadThrow](stateName: String, inputFilter: Filter, outputFilter: Filter)
+    extends ExecutorFunctions {
   private val monadError = MonadThrow[F]
   import monadError._
   def execute(actions: List[Json => F[Json]], nextStep: Json => F[Json])(input: Json): F[Json] = {
     for {
-      stateJson <- fromEither(inputFilter.transform(input)).ensure(InputStateFilterEvaluatedToNull(stateName))(v =>
-                    !v.isNull
-                  )
+      stateJson <- fromEither(
+                    inputFilter
+                      .transform(List(input))
+                      .flatMap(getUnique(NonUniqueInputState(stateName), _))
+                  ).ensure(InputStateFilterEvaluatedToNull(stateName))(v => !v.isNull)
       mergedJson <- actions.foldM(stateJson) {
                      case (js, a) => a(js).map(r => asNonNull(r).map(merge(_, js)).getOrElse(js))
                    }
-      updatedJson <- fromEither(outputFilter.transform(mergedJson)).ensure(OutputStateFilterEvaluatedToNull(stateName))(
-                      v => !v.isNull
-                    )
+      updatedJson <- fromEither(
+                      outputFilter.transform(List(mergedJson)).flatMap(getUnique(NonUniqueInputState(stateName), _))
+                    ).ensure(OutputStateFilterEvaluatedToNull(stateName))(v => !v.isNull)
       result <- nextStep(updatedJson)
     } yield result
   }

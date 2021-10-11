@@ -1,6 +1,6 @@
 package org.fluminous.runtime
 
-import io.circe.{DecodingFailure, Json}
+import io.circe.{ DecodingFailure, Json }
 import org.fluminous.services.ServiceException
 
 sealed class ExecutionRuntimeException(val message: String, val cause: Option[Exception] = Option.empty)
@@ -22,6 +22,26 @@ final case class ActionFilterEvaluatedToNull(stateName: String)
 
 final case class ConditionEvaluatedToNonBoolean(stateName: String, value: Json)
     extends ExecutionRuntimeException(s"Condition in state ${stateName} evaluated to non-boolean value: $value")
+
+final case class NonUniqueArgumentValue(stateName: String, operationName: String)
+    extends ExecutionRuntimeException(
+      s"Arguments of operation $operationName in state ${stateName} evaluated to multiple values"
+    )
+
+final case class NonUniqueInputState(stateName: String)
+    extends ExecutionRuntimeException(
+      s"Input in state ${stateName} evaluated to multiple values"
+    )
+
+final case class NonUniqueOutputState(stateName: String)
+    extends ExecutionRuntimeException(
+      s"Output in state ${stateName} evaluated to multiple values"
+    )
+
+final case class NonUniqueCondition(stateName: String)
+    extends ExecutionRuntimeException(
+      s"Condition in state ${stateName} evaluated to multiple values"
+    )
 
 final case class ServiceExecutionException(exception: ServiceException)
     extends ExecutionRuntimeException(
