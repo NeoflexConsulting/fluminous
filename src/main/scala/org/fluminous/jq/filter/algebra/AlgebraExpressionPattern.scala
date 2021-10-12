@@ -27,7 +27,7 @@ case object AlgebraExpressionPattern extends ExpressionPattern {
       case filter :: HNil => _ => filter
     },
     (capture[Filter] ->: testThat[Identifier](_.value == "-")).ifValidReplaceBy {
-      case filter :: HNil => _ => filter
+      case filter :: HNil => NegatedFilter(_, filter)
     }
   )
 }
