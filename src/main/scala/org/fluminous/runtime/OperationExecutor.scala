@@ -24,7 +24,7 @@ final case class OperationExecutor[F[_]: MonadThrow](stateName: String, inputFil
                      case (js, a) => a(js).map(r => asNonNull(r).map(merge(_, js)).getOrElse(js))
                    }
       updatedJson <- fromEither(
-                      outputFilter.transform(List(mergedJson)).flatMap(getUnique(NonUniqueInputState(stateName), _))
+                      outputFilter.transform(List(mergedJson)).flatMap(getUnique(NonUniqueOutputState(stateName), _))
                     ).ensure(OutputStateFilterEvaluatedToNull(stateName))(v => !v.isNull)
       result <- nextStep(updatedJson)
     } yield result

@@ -28,6 +28,11 @@ final case class NonUniqueArgumentValue(stateName: String, operationName: String
       s"Arguments of operation $operationName in state ${stateName} evaluated to multiple values"
     )
 
+final case class NonUniqueResult(stateName: String, operationName: String)
+  extends ExecutionRuntimeException(
+    s"Result of operation $operationName in state ${stateName} evaluated to multiple values"
+  )
+
 final case class NonUniqueInputState(stateName: String)
     extends ExecutionRuntimeException(
       s"Input in state ${stateName} evaluated to multiple values"

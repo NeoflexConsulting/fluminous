@@ -31,7 +31,7 @@ case class ActionExecutor[F[_]: MonadThrow](
                         case e: ServiceException => raiseError(ServiceExecutionException(e))
                       }
       r            <- fromEither(resultsFilter.transform(List(serviceOutput)).flatMap(j => toStateDataFilter.transform(j)))
-      uniqueResult <- fromEither(getUnique(NonUniqueArgumentValue(stateName, operationName), r))
+      uniqueResult <- fromEither(getUnique(NonUniqueResult(stateName, operationName), r))
     } yield uniqueResult
   }
 
