@@ -1,21 +1,24 @@
 package org.fluminous.jq.filter.selector
 
 import org.fluminous.jq.Expression
-import org.fluminous.jq.filter.pattern.dsl.Matcher.{capture, lookup, test}
-import org.fluminous.jq.filter.pattern.{ExpressionPattern, PatternCases}
-import org.fluminous.jq.tokens.symbolic.Root
-import org.fluminous.jq.tokens.{Identifier, RawString}
-import shapeless.{::, HNil}
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, lookup, test }
+import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
+import org.fluminous.jq.tokens.symbolic.{ LeftSquareBracket, Root }
+import org.fluminous.jq.tokens.{ Identifier, RawString }
+import shapeless.{ ::, HNil }
 
 case object SelectorPattern extends ExpressionPattern {
-  override val ExpressionCases: PatternCases = PatternCases[Selector](
+  override val ExpressionCases: PatternCases = PatternCases[SelectorByName](
     (capture[Identifier] ->: test[Root]).ifValidReplaceBy {
-      case id :: HNil => Selector(_, id.value)
+      case id :: HNil => SelectorByName(_, id.value)
     },
     (capture[RawString] ->: test[Root]).ifValidReplaceBy {
-      case s :: HNil => Selector(_, s.value)
+      case s :: HNil => SelectorByName(_, s.value)
     },
-    (lookup[Expression].notInstance[Identifier].notInstance[RawString] ->: test[Root]).ifValidReplaceBy { HNil =>
+    (lookup[Expression]
+      .notInstance[Identifier]
+      .notInstance[RawString]
+      .notInstance[LeftSquareBracket] ->: test[Root]).ifValidReplaceBy { HNil =>
       IdentitySelector
     }
   )

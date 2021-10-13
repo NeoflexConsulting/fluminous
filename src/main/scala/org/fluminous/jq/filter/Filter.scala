@@ -4,8 +4,12 @@ import io.circe.Json
 import org.fluminous.jq.{ Description, EvaluationException, Expression }
 import cats.syntax.traverse._
 
-trait Filter extends Expression {
-  def transform(input: List[Json]): Either[EvaluationException, List[Json]] = input.map(transformSingle).sequence
+trait SequenceFilter extends Expression {
+  def transform(input: List[Json]): Either[EvaluationException, List[Json]]
+}
+
+trait Filter extends SequenceFilter {
+  override def transform(input: List[Json]): Either[EvaluationException, List[Json]] = input.map(transformSingle).sequence
   def transformSingle(input: Json): Either[EvaluationException, Json]
 }
 

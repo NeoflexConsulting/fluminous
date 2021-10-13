@@ -1,9 +1,7 @@
 package org.fluminous.jq.tokens.symbolic
 
-import io.circe.{Json, JsonObject}
-import org.fluminous.jq.filter.algebra.AlgebraOperation
-import org.fluminous.jq.tokens.{AppendResult, TokenConstructed}
-import org.fluminous.jq.{Description, EvaluationException, ParserException, input}
+import org.fluminous.jq.tokens.{ AppendResult, TokenConstructed }
+import org.fluminous.jq.{ input, ParserException }
 
 trait AtomicToken extends SymbolToken {
   override val char: Char
@@ -26,6 +24,7 @@ object AtomicToken {
     Minus.char              -> (Minus(_)),
     Divide.char             -> (Divide(_)),
     Multiply.char           -> (Multiply(_)),
-    Modulo.char             -> (Modulo(_))
+    Modulo.char             -> (Modulo(_)),
+    QuestionMark.char       -> (QuestionMark(_))
   )
 }

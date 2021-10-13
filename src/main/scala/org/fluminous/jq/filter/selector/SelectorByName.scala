@@ -5,7 +5,7 @@ import io.circe.Json.Null
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{ Description, EvaluationException }
 
-final case class Selector(override val position: Int, field: String) extends Filter {
+final case class SelectorByName(override val position: Int, field: String) extends Filter {
   override def transformSingle(input: Json): Either[EvaluationException, Json] = {
     if (input.isNull) {
       Right(input)
@@ -20,11 +20,8 @@ final case class Selector(override val position: Int, field: String) extends Fil
   override val description: String = s"selector for field: $field"
 }
 
-object Selector {
-  implicit def typeDescription: Description[Selector] = new Description[Selector] {
-    override val description: String = "field selector"
-  }
-  implicit def identityDescription: Description[IdentitySelector] = new Description[IdentitySelector] {
-    override val description: String = "field selector"
+object SelectorByName {
+  implicit def typeDescription: Description[SelectorByName] = new Description[SelectorByName] {
+    override val description: String = "selector by name"
   }
 }
