@@ -4,7 +4,7 @@ import io.circe.Json
 import org.fluminous.jq.EvaluationException
 
 case object Identity extends Filter {
-  override val isSingleValued: Boolean = false
+  override val isSingleValued: Boolean = true
   override def transform(input: Json): Either[EvaluationException, List[Json]] =
     Right(List(input))
   override val position: Int       = 0

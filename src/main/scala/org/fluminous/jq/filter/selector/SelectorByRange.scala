@@ -6,7 +6,7 @@ import org.fluminous.jq.filter.Filter
 
 final case class SelectorByRange(override val position: Int, firstIndex: Option[Int], lastIndex: Option[Int])
     extends Filter {
-  override val isSingleValued: Boolean = true
+  override val isSingleValued: Boolean = rangeInterval <= 0
   override def transform(input: Json): Either[EvaluationException, List[Json]] = {
     if (input.isNull) {
       Right(List(input))
@@ -37,6 +37,12 @@ final case class SelectorByRange(override val position: Int, firstIndex: Option[
 
   private def rangeAsString: String = {
     s"${firstIndex.map(_.toString).getOrElse("")}:${lastIndex.map(_.toString).getOrElse("")}"
+  }
+
+  private def rangeInterval: Int = {
+    val f = firstIndex.getOrElse(0)
+    val l = lastIndex.getOrElse(f + 1)
+    l - f
   }
 
   override val description: String = s"selector for range: $rangeAsString"

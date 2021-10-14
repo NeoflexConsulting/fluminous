@@ -2,7 +2,6 @@ package org.fluminous.jq.filter.selector
 
 import io.circe.Json
 import org.fluminous.jq.{ Description, EvaluationException }
-import cats.syntax.traverse._
 import org.fluminous.jq.filter.Filter
 
 case class Splitter(override val position: Int) extends Filter {

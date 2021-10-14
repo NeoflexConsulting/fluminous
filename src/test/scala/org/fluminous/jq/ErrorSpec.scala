@@ -8,7 +8,7 @@ class ErrorSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wit
   "Parsing of wrong jq statements" should {
     "fail with error" in {
       parse("{customerId, body : {customer: {id : customerId, name, age}} }") should be(
-        Left(ParserException(38, "Error occurred while parsing field selector: Unexpected customerId"))
+        Left(ParserException(38, "Error occurred while parsing selector by name: Unexpected customerId"))
       )
 
       parse("{name, age}}") should be(

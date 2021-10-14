@@ -7,7 +7,7 @@ import cats.syntax.foldable._
 import cats.syntax.traverse._
 
 final case class Pipe(override val position: Int, filters: List[Filter]) extends Filter {
-  override val isSingleValued: Boolean = true
+  override val isSingleValued: Boolean = filters.forall(_.isSingleValued)
   override def transform(input: Json): Either[EvaluationException, List[Json]] = {
     filters.foldLeftM(List(input)) { (jsonList, filter) =>
       jsonList.map(filter.transform).flatSequence
