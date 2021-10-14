@@ -21,7 +21,7 @@ case class ActionExecutor[F[_]: MonadThrow](
 
   def execute(service: Service[F])(input: Json): F[Json] = {
     for {
-      argumentsAsJson <- fromEither(arguments.traverse { case (k, v) => v.transform(List(input)).map(j => (k, j)) })
+      argumentsAsJson <- fromEither(arguments.traverse { case (k, v) => v.transform(input).map(j => (k, j)) })
       argumentsAsSingleJson <- fromEither(
                                 argumentsAsJson
                                   .map(getUniqueValue(NonUniqueArgumentValue(stateName, operationName)))
@@ -30,7 +30,7 @@ case class ActionExecutor[F[_]: MonadThrow](
       serviceOutput <- recoverWith(service.invoke(argumentsAsSingleJson.toMap)) {
                         case e: ServiceException => raiseError(ServiceExecutionException(e))
                       }
-      r            <- fromEither(resultsFilter.transform(List(serviceOutput)).flatMap(j => toStateDataFilter.transform(j)))
+      r            <- fromEither(resultsFilter.transform(serviceOutput).flatMap(_.map(toStateDataFilter.transform).flatSequence))
       uniqueResult <- fromEither(getUnique(NonUniqueResult(stateName, operationName), r))
     } yield uniqueResult
   }

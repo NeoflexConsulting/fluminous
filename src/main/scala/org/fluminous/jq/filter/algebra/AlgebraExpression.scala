@@ -3,6 +3,7 @@ package org.fluminous.jq.filter.algebra
 import io.circe.Json
 import org.fluminous.jq.{ Description, EvaluationException }
 import org.fluminous.jq.filter.Filter
+import cats.syntax.traverse._
 
 final case class AlgebraExpression(
   override val position: Int,
@@ -10,6 +11,7 @@ final case class AlgebraExpression(
   left: Filter,
   right: Filter)
     extends Filter {
+  override val isSingleValued: Boolean = left.isSingleValued && right.isSingleValued
 
   def addFilter(termOperationSign: AlgebraOperation, term: Filter): AlgebraExpression = {
     if (this.operationSign.priority >= termOperationSign.priority) {
@@ -25,10 +27,10 @@ final case class AlgebraExpression(
 
   override val description: String = AlgebraExpression.typeDescription.description
 
-  override def transformSingle(input: Json): Either[EvaluationException, Json] = {
+  override def transform(input: Json): Either[EvaluationException, List[Json]] = {
     for {
-      leftResult <- left.transformSingle(input)
-      result     <- operationSign.execute(leftResult, right.transformSingle(input))
+      leftResult <- left.transform(input)
+      result     <- leftResult.map(operationSign.execute(_, right.isSingleValued, right.transform(input))).flatSequence
     } yield result
   }
 }

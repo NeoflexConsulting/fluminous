@@ -3,13 +3,18 @@ package org.fluminous.jq.tokens.symbolic
 import io.circe.Json
 import org.fluminous.jq.filter.algebra.AlgebraOperation
 import org.fluminous.jq.{ Description, EvaluationException }
+import cats.syntax.traverse._
 
 case class Minus(override val position: Int) extends AtomicToken with AlgebraOperation {
   val char                         = Minus.char
   override val description: String = Minus.typeDescription.description
   override val priority: Int       = 3
-  override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
-    right.flatMap(subtract(left, _))
+  override def execute(
+    left: Json,
+    isRightSingleValued: Boolean,
+    right: => Either[EvaluationException, List[Json]]
+  ): Either[EvaluationException, List[Json]] = {
+    right.flatMap(_.map(subtract(left, _)).sequence)
   }
   private def subtract(left: Json, right: Json): Either[EvaluationException, Json] = {
     subtractNumbers(left, right)

@@ -6,6 +6,7 @@ import org.fluminous.jq.{ input, Description, EvaluationException, ParserExcepti
 import org.fluminous.jq.input.{ Character, EOF }
 
 case class RawString(override val position: Int, value: String, finished: Boolean = true) extends Token with Filter {
+  override val isSingleValued: Boolean = true
   def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, AppendResult] = {
     if (finished) {
       Right(TokenConstructed)
@@ -20,7 +21,7 @@ case class RawString(override val position: Int, value: String, finished: Boolea
   override def toString: String    = s""""${value}""""
   override val description: String = toString
 
-  override def transformSingle(input: Json): Either[EvaluationException, Json] = Right(Json.fromString(value))
+  override def transform(input: Json): Either[EvaluationException, List[Json]] = Right(List(Json.fromString(value)))
 }
 
 object RawString {

@@ -8,15 +8,19 @@ import io.circe.syntax._
 final case class Or(override val position: Int) extends AlgebraOperation {
   override val priority: Int       = 1
   override val description: String = "or"
-  override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
+  override def execute(
+    left: Json,
+    isRightSingleValued: Boolean,
+    right: => Either[EvaluationException, List[Json]]
+  ): Either[EvaluationException, List[Json]] = {
     val leftBoolean = asBoolean(left)
-    if (leftBoolean) {
-      Right(Json.True)
+    if (leftBoolean && isRightSingleValued) {
+      Right(List(Json.True))
     } else {
       for {
         evaluated <- right
       } yield {
-        (leftBoolean || asBoolean(evaluated)).asJson
+        evaluated.map(b => (leftBoolean || asBoolean(b)).asJson)
       }
     }
   }

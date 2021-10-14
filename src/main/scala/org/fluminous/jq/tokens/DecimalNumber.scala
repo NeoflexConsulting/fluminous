@@ -7,6 +7,7 @@ import org.fluminous.jq.input.{Character, EOF}
 import org.fluminous.jq.tokens.symbolic.AtomicToken
 
 case class DecimalNumber(override val position: Int, value: String) extends Token with Filter {
+  override val isSingleValued: Boolean = true
   def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, AppendResult] = {
     symbol match {
       case Character(c) if Token.whitespaceSymbols.contains(c) || AtomicToken.symbols.contains(c) =>
@@ -24,7 +25,7 @@ case class DecimalNumber(override val position: Int, value: String) extends Toke
   override def toString: String    = value
   override val description: String = toString
 
-  override def transformSingle(input: Json): Either[EvaluationException, Json] = Right(Json.fromBigDecimal(BigDecimal(value)))
+  override def transform(input: Json): Either[EvaluationException, List[Json]] = Right(List(Json.fromBigDecimal(BigDecimal(value))))
 }
 
 object DecimalNumber {

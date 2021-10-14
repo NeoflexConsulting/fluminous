@@ -4,6 +4,7 @@ import io.circe.Json
 import org.fluminous.jq.filter.algebra.AlgebraOperation
 import org.fluminous.jq.{ input, Description, EvaluationException, ParserException }
 import io.circe.syntax._
+import cats.syntax.traverse._
 
 case class LessOrEqual(override val position: Int) extends Token with AlgebraOperation {
   def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, AppendResult] = {
@@ -15,8 +16,12 @@ case class LessOrEqual(override val position: Int) extends Token with AlgebraOpe
     override val description: String = toString
   }
   override val priority: Int = 5
-  override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
-    right.flatMap(lessOrEqual(left, _))
+  override def execute(
+    left: Json,
+    isRightSingleValued: Boolean,
+    right: => Either[EvaluationException, List[Json]]
+  ): Either[EvaluationException, List[Json]] = {
+    right.flatMap(_.map(lessOrEqual(left, _)).sequence)
   }
   private def lessOrEqual(left: Json, right: Json): Either[EvaluationException, Json] = {
     (for {

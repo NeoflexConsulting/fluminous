@@ -25,8 +25,8 @@ case class Equal(override val position: Int, isCompleted: Boolean = false) exten
   }
 
   override val priority: Int = 5
-  override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
-    right.map(isEqual(left, _))
+  override def execute(left: Json,  isRightSingleValued: Boolean, right: => Either[EvaluationException, List[Json]]): Either[EvaluationException, List[Json]] = {
+    right.map(_.map(isEqual(left, _)))
   }
   private def isEqual(left: Json, right: Json): Json = {
     (left == right).asJson

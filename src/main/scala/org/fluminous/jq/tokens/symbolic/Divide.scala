@@ -11,8 +11,12 @@ case class Divide(override val position: Int) extends AtomicToken with AlgebraOp
   val char                         = Divide.char
   override val description: String = Divide.typeDescription.description
   override val priority: Int       = 4
-  override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
-    right.flatMap(divide(left, _))
+  override def execute(
+    left: Json,
+    isRightSingleValued: Boolean,
+    right: => Either[EvaluationException, List[Json]]
+  ): Either[EvaluationException, List[Json]] = {
+    right.flatMap(_.map(divide(left, _)).sequence)
   }
   private def divide(left: Json, right: Json): Either[EvaluationException, Json] = {
     divideNumbers(left, right).flatMap {

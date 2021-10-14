@@ -17,14 +17,14 @@ final case class OperationExecutor[F[_]: MonadThrow](stateName: String, inputFil
     for {
       stateJson <- fromEither(
                     inputFilter
-                      .transform(List(input))
+                      .transform(input)
                       .flatMap(getUnique(NonUniqueInputState(stateName), _))
                   ).ensure(InputStateFilterEvaluatedToNull(stateName))(v => !v.isNull)
       mergedJson <- actions.foldM(stateJson) {
                      case (js, a) => a(js).map(r => asNonNull(r).map(merge(_, js)).getOrElse(js))
                    }
       updatedJson <- fromEither(
-                      outputFilter.transform(List(mergedJson)).flatMap(getUnique(NonUniqueOutputState(stateName), _))
+                      outputFilter.transform(mergedJson).flatMap(getUnique(NonUniqueOutputState(stateName), _))
                     ).ensure(OutputStateFilterEvaluatedToNull(stateName))(v => !v.isNull)
       result <- nextStep(updatedJson)
     } yield result

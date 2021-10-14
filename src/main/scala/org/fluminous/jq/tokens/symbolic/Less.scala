@@ -6,6 +6,7 @@ import org.fluminous.jq.input.Character
 import org.fluminous.jq.tokens._
 import org.fluminous.jq.{ input, Description, EvaluationException, ParserException }
 import io.circe.syntax._
+import cats.syntax.traverse._
 
 case class Less(override val position: Int) extends Token with AlgebraOperation {
   def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, AppendResult] = {
@@ -22,8 +23,8 @@ case class Less(override val position: Int) extends Token with AlgebraOperation 
     override val description: String = toString
   }
   override val priority: Int = 5
-  override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
-    right.flatMap(less(left, _))
+  override def execute(left: Json,  isRightSingleValued: Boolean, right: => Either[EvaluationException, List[Json]]): Either[EvaluationException, List[Json]] = {
+    right.flatMap(_.map(less(left, _)).sequence)
   }
   private def less(left: Json, right: Json): Either[EvaluationException, Json] = {
     (for {

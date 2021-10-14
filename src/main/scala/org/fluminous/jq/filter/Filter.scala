@@ -2,15 +2,10 @@ package org.fluminous.jq.filter
 
 import io.circe.Json
 import org.fluminous.jq.{ Description, EvaluationException, Expression }
-import cats.syntax.traverse._
 
-trait SequenceFilter extends Expression {
-  def transform(input: List[Json]): Either[EvaluationException, List[Json]]
-}
-
-trait Filter extends SequenceFilter {
-  override def transform(input: List[Json]): Either[EvaluationException, List[Json]] = input.map(transformSingle).sequence
-  def transformSingle(input: Json): Either[EvaluationException, Json]
+trait Filter extends Expression {
+  val isSingleValued: Boolean
+  def transform(input: Json): Either[EvaluationException, List[Json]]
 }
 
 object Filter {

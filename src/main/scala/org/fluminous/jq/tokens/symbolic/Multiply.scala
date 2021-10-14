@@ -4,14 +4,20 @@ import io.circe.Json
 import io.circe.Json.Null
 import org.fluminous.jq.{ Description, EvaluationException }
 import org.fluminous.jq.filter.algebra.AlgebraOperation
+import cats.syntax.traverse._
 
 case class Multiply(override val position: Int) extends AtomicToken with AlgebraOperation {
   val char                         = Multiply.char
   override val description: String = Multiply.typeDescription.description
   override val priority: Int       = 4
-  override def execute(left: Json, right: => Either[EvaluationException, Json]): Either[EvaluationException, Json] = {
-    right.flatMap(multiply(left, _))
+  override def execute(
+    left: Json,
+    isRightSingleValued: Boolean,
+    right: => Either[EvaluationException, List[Json]]
+  ): Either[EvaluationException, List[Json]] = {
+    right.flatMap(_.map(multiply(left, _)).sequence)
   }
+
   private def multiply(left: Json, right: Json): Either[EvaluationException, Json] = {
     multiplyNumbers(left, right)
       .orElse(multiplyStringByNumber(left, right))

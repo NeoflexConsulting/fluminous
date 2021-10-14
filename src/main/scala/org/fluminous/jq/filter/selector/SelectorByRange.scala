@@ -6,9 +6,10 @@ import org.fluminous.jq.filter.Filter
 
 final case class SelectorByRange(override val position: Int, firstIndex: Option[Int], lastIndex: Option[Int])
     extends Filter {
-  override def transformSingle(input: Json): Either[EvaluationException, Json] = {
+  override val isSingleValued: Boolean = true
+  override def transform(input: Json): Either[EvaluationException, List[Json]] = {
     if (input.isNull) {
-      Right(input)
+      Right(List(input))
     } else {
       for {
         jsonArray <- input.asArray.toRight(
@@ -18,7 +19,7 @@ final case class SelectorByRange(override val position: Int, firstIndex: Option[
                       )
                     )
         element <- getElementsByRange(jsonArray)
-      } yield Json.fromValues(element)
+      } yield List(Json.fromValues(element))
     }
   }
 

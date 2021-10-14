@@ -5,16 +5,17 @@ import org.fluminous.jq.{ Description, EvaluationException }
 import org.fluminous.jq.filter.Filter
 
 final case class SelectorByIndex(override val position: Int, index: Int) extends Filter {
-  override def transformSingle(input: Json): Either[EvaluationException, Json] = {
+  override val isSingleValued: Boolean = true
+  override def transform(input: Json): Either[EvaluationException, List[Json]] = {
     if (input.isNull) {
-      Right(input)
+      Right(List(input))
     } else {
       for {
         jsonArray <- input.asArray.toRight(
                       EvaluationException(position, s"Trying to read $index element from json of type ${input.name}")
                     )
         element <- getElementByIndex(jsonArray)
-      } yield element
+      } yield List(element)
     }
   }
 
