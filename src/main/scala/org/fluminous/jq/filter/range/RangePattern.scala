@@ -7,7 +7,7 @@ import org.fluminous.jq.tokens.NaturalNumber
 import org.fluminous.jq.tokens.symbolic.{ Colon, LeftSquareBracket, RightSquareBracket }
 import shapeless.{ ::, HNil }
 
-class RangePattern extends ExpressionPattern {
+object RangePattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[Range](
     (test[RightSquareBracket] ->: capture[IntegerNumber] ->: test[Colon] ->: capture[IntegerNumber] ->: test[
       LeftSquareBracket

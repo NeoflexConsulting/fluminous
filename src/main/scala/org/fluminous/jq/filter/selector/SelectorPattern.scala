@@ -26,7 +26,7 @@ case object SelectorPattern extends ExpressionPattern {
     (test[RightSquareBracket] ->: capture[IntegerNumber] ->: test[LeftSquareBracket] ->: test[Root]).ifValidReplaceBy {
       case s :: HNil => SelectorByIndex(_, s.value)
     },
-    (test[RightSquareBracket] ->: capture[Range] ->: test[LeftSquareBracket] ->: test[Root]).ifValidReplaceBy {
+    (capture[Range] ->: test[Root]).ifValidReplaceBy {
       case r :: HNil => SelectorByRange(_, r)
     },
     (test[QuestionMark] ->: capture[SelectorByName]).ifValidReplaceBy {

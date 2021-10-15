@@ -8,6 +8,7 @@ import org.fluminous.jq.filter.json.tuple.JsonTupleHeaderPattern
 import org.fluminous.jq.{ Expression, FoldFunctions, ParserException }
 import org.fluminous.jq.filter.pattern.dsl.{ MatchFailure, PositionedMatchFailure }
 import org.fluminous.jq.filter.pipe.PipePattern
+import org.fluminous.jq.filter.range.RangePattern
 import org.fluminous.jq.filter.selector.SelectorPattern
 import org.fluminous.jq.filter.sequence.FilterSequencePattern
 import org.fluminous.jq.tokens.Tokenizer
@@ -50,6 +51,7 @@ trait ExpressionPattern extends FoldFunctions {
 object ExpressionPattern {
   val patterns: List[ExpressionPattern] = List(
     ConstantPattern,
+    RangePattern,
     SelectorPattern,
     PipePattern,
     JsonTupleHeaderPattern,
