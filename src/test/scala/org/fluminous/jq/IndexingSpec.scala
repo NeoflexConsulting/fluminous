@@ -64,8 +64,8 @@ class IndexingSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll 
       )
       checkFilter(
         """.[2:4]""",
-        """abcdefghi""",
-        """cd"""
+        """"abcdefghi"""",
+        """"cd""""
       )
       checkFilter(
         """.[:3]""",
