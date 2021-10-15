@@ -92,6 +92,11 @@ class IndexingSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll 
         """{"a": 1, "b": 1}""",
         List("""1""", """1""")
       )
+      checkFilter(
+        """.foo, .bar""",
+        """{"foo": 42, "bar": "something else", "baz": true}""",
+        List("""42""", """"something else"""")
+      )
     }
   }
 }
