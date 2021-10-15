@@ -3,7 +3,7 @@ package org.fluminous.jq.filter.selector
 import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, lookup, test }
 import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
-import org.fluminous.jq.tokens.symbolic.{ LeftSquareBracket, RightSquareBracket, Root }
+import org.fluminous.jq.tokens.symbolic.{ LeftSquareBracket, QuestionMark, RightSquareBracket, Root }
 import org.fluminous.jq.tokens.{ Identifier, NaturalNumber, RawString }
 import org.fluminous.jq.filter.range.Range
 import shapeless.{ ::, HNil }
@@ -27,6 +27,15 @@ case object SelectorPattern extends ExpressionPattern {
     },
     (test[RightSquareBracket] ->: capture[Range] ->: test[LeftSquareBracket] ->: test[Root]).ifValidReplaceBy {
       case r :: HNil => SelectorByRange(_, r)
+    },
+    (test[QuestionMark] ->: capture[SelectorByName]).ifValidReplaceBy {
+      case r :: HNil => SuppressErrorSelector(_, r)
+    },
+    (test[QuestionMark] ->: capture[SelectorByIndex]).ifValidReplaceBy {
+      case r :: HNil => SuppressErrorSelector(_, r)
+    },
+    (test[QuestionMark] ->: capture[SelectorByRange]).ifValidReplaceBy {
+      case r :: HNil => SuppressErrorSelector(_, r)
     },
     (lookup[Expression]
       .notInstance[Identifier]
