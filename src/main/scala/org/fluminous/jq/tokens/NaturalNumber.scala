@@ -26,11 +26,13 @@ case class NaturalNumber(override val position: Int, value: String) extends Toke
   override def toString: String    = value
   override val description: String = toString
 
-  override def transform(input: Json): Either[EvaluationException, List[Json]] = Right(List(Json.fromInt(value.toInt)))
+  def intValue: Int = value.toInt
+
+  override def transform(input: Json): Either[EvaluationException, List[Json]] = Right(List(Json.fromInt(intValue)))
 }
 
 object NaturalNumber {
   implicit def typeDescription: Description[NaturalNumber] = new Description[NaturalNumber] {
-    override val description: String = "integer number"
+    override val description: String = "natural number"
   }
 }

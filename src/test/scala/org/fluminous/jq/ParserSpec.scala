@@ -1,10 +1,11 @@
 package org.fluminous.jq
 
+import org.fluminous.jq.filter.algebra.IntegerNumber
 import org.fluminous.jq.filter.json.obj.JsonObject
 import org.fluminous.jq.filter.json.array.JsonArray
 import org.fluminous.jq.filter.pipe.Pipe
-import org.fluminous.jq.filter.selector.{ IdentitySelector, SelectorByName }
-import org.fluminous.jq.tokens.{ DecimalNumber, NaturalNumber, RawString }
+import org.fluminous.jq.filter.selector.{IdentitySelector, SelectorByName}
+import org.fluminous.jq.tokens.{DecimalNumber, NaturalNumber, RawString}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -12,7 +13,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll with Parser {
   "Parser" should {
     "parse selectors" in {
-      parse("25") should be(Right(NaturalNumber(1, "25")))
+      parse("25") should be(Right(IntegerNumber(1, 25)))
       parse(".") should be(Right(IdentitySelector(1)))
       parse(".foo") should be(Right(SelectorByName(1, "foo")))
       parse(".foo.bar") should be(Right(Pipe(1, List(SelectorByName(1, "foo"), SelectorByName(5, "bar")))))
@@ -36,7 +37,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonArray(
             1,
-            List(NaturalNumber(2, "52"), RawString(6, "hello"), DecimalNumber(15, "23.4"))
+            List(IntegerNumber(2, 52), RawString(6, "hello"), DecimalNumber(15, "23.4"))
           )
         )
       )
@@ -44,14 +45,14 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonObject(
             1,
-            Map("a" -> NaturalNumber(7, "42"), "b" -> DecimalNumber(16, "17.4"))
+            Map("a" -> IntegerNumber(7, 42), "b" -> DecimalNumber(16, "17.4"))
           )
         )
       )
 
       parse("""{"a": 42, "b": .foo}""") should be(
         Right(
-          JsonObject(1, Map("a" -> NaturalNumber(7, "42"), "b" -> SelectorByName(16, "foo")))
+          JsonObject(1, Map("a" -> IntegerNumber(7, 42), "b" -> SelectorByName(16, "foo")))
         )
       )
 
@@ -59,7 +60,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonObject(
             1,
-            Map("a" -> NaturalNumber(5, "42"), "b" -> DecimalNumber(12, "17.4"))
+            Map("a" -> IntegerNumber(5, 42), "b" -> DecimalNumber(12, "17.4"))
           )
         )
       )

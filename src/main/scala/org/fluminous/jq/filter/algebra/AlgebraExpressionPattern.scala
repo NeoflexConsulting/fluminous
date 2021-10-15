@@ -5,7 +5,7 @@ import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
 import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, captureIf, lookup, test, testThat }
-import org.fluminous.jq.tokens.Identifier
+import org.fluminous.jq.tokens.{ Identifier, NaturalNumber }
 import org.fluminous.jq.tokens.symbolic.{ LeftBracket, RightBracket }
 import shapeless.{ ::, HNil }
 
@@ -25,6 +25,12 @@ case object AlgebraExpressionPattern extends ExpressionPattern {
     },
     (test[RightBracket] ->: capture[Filter] ->: test[LeftBracket]).ifValidReplaceBy {
       case filter :: HNil => _ => filter
+    },
+    (capture[NaturalNumber] ->: testThat[Identifier](_.value == "-")).ifValidReplaceBy {
+      case n :: HNil => IntegerNumber(_, -n.intValue)
+    },
+    capture[NaturalNumber].ifValidReplaceBy {
+      case n :: HNil => IntegerNumber(_, n.intValue)
     },
     (capture[Filter] ->: testThat[Identifier](_.value == "-")).ifValidReplaceBy {
       case filter :: HNil => NegatedFilter(_, filter)

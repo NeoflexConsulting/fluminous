@@ -2,8 +2,8 @@ package org.fluminous.jq.tokens
 
 import io.circe.Json
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.{Description, EvaluationException, ParserException, input}
-import org.fluminous.jq.input.{Character, EOF}
+import org.fluminous.jq.{ input, Description, EvaluationException, ParserException }
+import org.fluminous.jq.input.{ Character, EOF }
 import org.fluminous.jq.tokens.symbolic.AtomicToken
 
 case class DecimalNumber(override val position: Int, value: String) extends Token with Filter {
@@ -22,10 +22,14 @@ case class DecimalNumber(override val position: Int, value: String) extends Toke
         Left(ParserException(symbolPosition, "Identifier could not start with number. Try to surround it by quotes"))
     }
   }
+
+  def decimalValue: BigDecimal = BigDecimal(value)
+
   override def toString: String    = value
   override val description: String = toString
 
-  override def transform(input: Json): Either[EvaluationException, List[Json]] = Right(List(Json.fromBigDecimal(BigDecimal(value))))
+  override def transform(input: Json): Either[EvaluationException, List[Json]] =
+    Right(List(Json.fromBigDecimal(decimalValue)))
 }
 
 object DecimalNumber {
