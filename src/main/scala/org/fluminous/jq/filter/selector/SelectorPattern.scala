@@ -1,12 +1,13 @@
 package org.fluminous.jq.filter.selector
 
 import org.fluminous.jq.Expression
-import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, lookup, test }
-import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
-import org.fluminous.jq.tokens.symbolic.{ LeftSquareBracket, QuestionMark, RightSquareBracket, Root }
-import org.fluminous.jq.tokens.{ Identifier, NaturalNumber, RawString }
+import org.fluminous.jq.filter.algebra.IntegerNumber
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{capture, lookup, test}
+import org.fluminous.jq.filter.pattern.{ExpressionPattern, PatternCases}
+import org.fluminous.jq.tokens.symbolic.{LeftSquareBracket, QuestionMark, RightSquareBracket, Root}
+import org.fluminous.jq.tokens.{Identifier, RawString}
 import org.fluminous.jq.filter.range.Range
-import shapeless.{ ::, HNil }
+import shapeless.{::, HNil}
 
 case object SelectorPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[SelectorByName](
@@ -22,8 +23,8 @@ case object SelectorPattern extends ExpressionPattern {
     (test[RightSquareBracket] ->: capture[RawString] ->: test[LeftSquareBracket] ->: test[Root]).ifValidReplaceBy {
       case s :: HNil => SelectorByName(_, s.value)
     },
-    (test[RightSquareBracket] ->: capture[NaturalNumber] ->: test[LeftSquareBracket] ->: test[Root]).ifValidReplaceBy {
-      case s :: HNil => SelectorByIndex(_, s.intValue)
+    (test[RightSquareBracket] ->: capture[IntegerNumber] ->: test[LeftSquareBracket] ->: test[Root]).ifValidReplaceBy {
+      case s :: HNil => SelectorByIndex(_, s.value)
     },
     (test[RightSquareBracket] ->: capture[Range] ->: test[LeftSquareBracket] ->: test[Root]).ifValidReplaceBy {
       case r :: HNil => SelectorByRange(_, r)
