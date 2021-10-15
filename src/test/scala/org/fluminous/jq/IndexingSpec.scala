@@ -82,6 +82,16 @@ class IndexingSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll 
         """[{"name":"JSON", "good":true}, {"name":"XML", "good":false}]""",
         List("""{"name":"JSON", "good":true}""", """{"name":"XML", "good":false}""")
       )
+      checkFilter(
+        """.[]""",
+        """[]""",
+        List.empty
+      )
+      checkFilter(
+        """.[]""",
+        """{"a": 1, "b": 1}""",
+        List("""1""", """1""")
+      )
     }
   }
 }
