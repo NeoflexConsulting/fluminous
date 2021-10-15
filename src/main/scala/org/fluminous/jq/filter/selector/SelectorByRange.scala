@@ -32,7 +32,7 @@ final case class SelectorByRange(override val position: Int, range: Range) exten
     if (end < start) {
       Left(EvaluationException(position, s"Invalid range: ${range.toString}"))
     } else {
-      Right(Json.fromValues(seq.slice(end, start)))
+      Right(Json.fromValues(seq.slice(start, end)))
     }
   }
 
@@ -42,7 +42,7 @@ final case class SelectorByRange(override val position: Int, range: Range) exten
     if (end < start) {
       Left(EvaluationException(position, s"Invalid range: ${range.toString}"))
     } else {
-      Right(Json.fromString(seq.slice(end, start)))
+      Right(Json.fromString(seq.slice(start, end)))
     }
   }
 
