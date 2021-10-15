@@ -9,18 +9,18 @@ case class Range(override val position: Int, firstIndex: Option[Int], lastIndex:
     s"${firstIndex.map(_.toString).getOrElse("")}:${lastIndex.map(_.toString).getOrElse("")}"
   }
 
-  def start(array: Vector[Json]): Int = {
+  def start(arrayLength: Int): Int = {
     val f = firstIndex.getOrElse(0)
     if (f < 0) {
-      array.length + f
+      arrayLength + f
     } else {
       f
     }
   }
-  def end(array: Vector[Json]): Int = {
-    val l = lastIndex.getOrElse(array.length)
+  def end(arrayLength: Int): Int = {
+    val l = lastIndex.getOrElse(arrayLength)
     if (l < 0) {
-      array.length + l
+      arrayLength + l
     } else {
       l
     }

@@ -57,6 +57,26 @@ class IndexingSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll 
         """[1,2,3]""",
         """2"""
       )
+      checkFilter(
+        """.[2:4]""",
+        """["a","b","c","d","e"]""",
+        """["c", "d"]"""
+      )
+      checkFilter(
+        """.[2:4]""",
+        """abcdefghi""",
+        """cd"""
+      )
+      checkFilter(
+        """.[:3]""",
+        """["a","b","c","d","e"]""",
+        """["a", "b", "c"]"""
+      )
+      checkFilter(
+        """.[-2:]""",
+        """["a","b","c","d","e"]""",
+        """["d", "e"]"""
+      )
     }
   }
 }

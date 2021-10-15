@@ -11,24 +11,38 @@ final case class SelectorByRange(override val position: Int, range: Range) exten
       Right(List(input))
     } else {
       for {
-        jsonArray <- input.asArray.toRight(
-                      EvaluationException(
-                        position,
-                        s"Trying to read range ${range.toString} from json of type ${input.name}"
-                      )
-                    )
-        element <- getElementsByRange(jsonArray)
-      } yield List(Json.fromValues(element))
+        result <- input.asArray
+                   .map(getElementsByRange)
+                   .orElse(input.asString.map(getElementsByRange))
+                   .getOrElse(
+                     Left(
+                       EvaluationException(
+                         position,
+                         s"Trying to read range ${range.toString} from json of type ${input.name}"
+                       )
+                     )
+                   )
+      } yield List(result)
     }
   }
 
-  private def getElementsByRange(jsonArray: Vector[Json]): Either[EvaluationException, Vector[Json]] = {
-    val start = range.start(jsonArray)
-    val end   = range.end(jsonArray)
+  private def getElementsByRange(seq: Vector[Json]): Either[EvaluationException, Json] = {
+    val start = range.start(seq.length)
+    val end   = range.end(seq.length)
     if (end < start) {
       Left(EvaluationException(position, s"Invalid range: ${range.toString}"))
     } else {
-      Right(jsonArray.slice(end, start))
+      Right(Json.fromValues(seq.slice(end, start)))
+    }
+  }
+
+  private def getElementsByRange(seq: String): Either[EvaluationException, Json] = {
+    val start = range.start(seq.length)
+    val end   = range.end(seq.length)
+    if (end < start) {
+      Left(EvaluationException(position, s"Invalid range: ${range.toString}"))
+    } else {
+      Right(Json.fromString(seq.slice(end, start)))
     }
   }
 
