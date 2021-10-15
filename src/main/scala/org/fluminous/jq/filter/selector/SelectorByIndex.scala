@@ -1,6 +1,7 @@
 package org.fluminous.jq.filter.selector
 
 import io.circe.Json
+import io.circe.Json.Null
 import org.fluminous.jq.{ Description, EvaluationException }
 import org.fluminous.jq.filter.Filter
 
@@ -14,16 +15,15 @@ final case class SelectorByIndex(override val position: Int, index: Int) extends
         jsonArray <- input.asArray.toRight(
                       EvaluationException(position, s"Trying to read $index element from json of type ${input.name}")
                     )
-        element <- getElementByIndex(jsonArray)
-      } yield List(element)
+      } yield List(getElementByIndex(jsonArray))
     }
   }
 
-  private def getElementByIndex(jsonArray: Vector[Json]): Either[EvaluationException, Json] = {
+  private def getElementByIndex(jsonArray: Vector[Json]): Json = {
     val naturalIndex = if (index >= 0) index else jsonArray.length + index
     jsonArray
       .lift(naturalIndex)
-      .toRight(EvaluationException(position, s"Invalid index $index for array of length ${jsonArray.length}"))
+      .getOrElse(Null)
   }
 
   override val description: String = s"selector for index: $index"
