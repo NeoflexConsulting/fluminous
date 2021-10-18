@@ -5,14 +5,16 @@ import io.circe.Json.Null
 import org.fluminous.jq.{ Description, EvaluationException }
 import org.fluminous.jq.filter.Filter
 
-final case class SelectorByIndex(override val position: Int, index: Int) extends Filter {
+final case class SelectorByIndex(override val position: Int, index: Int, parentFieldName: Option[String] = None)
+    extends Filter with SelectorFunctions {
   override val isSingleValued: Boolean = true
   override def transform(input: Json): Either[EvaluationException, List[Json]] = {
     if (input.isNull) {
       Right(List(input))
     } else {
       for {
-        jsonArray <- input.asArray.toRight(
+        childJson <- jsonFromFieldName(input, parentFieldName)
+        jsonArray <- childJson.asArray.toRight(
                       EvaluationException(position, s"Trying to read $index element from json of type ${input.name}")
                     )
       } yield List(getElementByIndex(jsonArray))

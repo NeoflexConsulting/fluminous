@@ -4,14 +4,16 @@ import io.circe.Json
 import org.fluminous.jq.{ Description, EvaluationException }
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.range.Range
-final case class SelectorByRange(override val position: Int, range: Range) extends Filter {
+final case class SelectorByRange(override val position: Int, range: Range, parentFieldName: Option[String] = None)
+    extends Filter with SelectorFunctions {
   override val isSingleValued: Boolean = range.rangeInterval <= 0
   override def transform(input: Json): Either[EvaluationException, List[Json]] = {
     if (input.isNull) {
       Right(List(input))
     } else {
       for {
-        result <- input.asArray
+        childJson <- jsonFromFieldName(input, parentFieldName)
+        result <- childJson.asArray
                    .map(getElementsByRange)
                    .orElse(input.asString.map(getElementsByRange))
                    .getOrElse(

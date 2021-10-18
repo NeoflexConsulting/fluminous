@@ -97,6 +97,11 @@ class IndexingSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll 
         """{"foo": 42, "bar": "something else", "baz": true}""",
         List("""42""", """"something else"""")
       )
+      checkFilter(
+        """.user, .projects[]""",
+        """{"user":"stedolan", "projects": ["jq", "wikiflow"]}""",
+        List(""""stedolan"""", """"jq"""", """"wikiflow"""")
+      )
     }
   }
 }

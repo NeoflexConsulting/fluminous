@@ -4,7 +4,7 @@ import org.fluminous.jq.{ input, Description, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 import org.fluminous.jq.tokens.symbolic.{ AtomicToken, Root }
 
-case class Identifier(override val position: Int, value: String) extends Token {
+case class Identifier(override val position: Int, override val value: String) extends Token with StringToken {
   def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, AppendResult] = {
     symbol match {
       case EOF =>

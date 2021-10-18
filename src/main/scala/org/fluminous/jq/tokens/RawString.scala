@@ -5,7 +5,7 @@ import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{ input, Description, EvaluationException, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
 
-case class RawString(override val position: Int, value: String, finished: Boolean = true) extends Token with Filter {
+case class RawString(override val position: Int, override val value: String, finished: Boolean = true) extends Token with Filter with StringToken{
   override val isSingleValued: Boolean = true
   def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, AppendResult] = {
     if (finished) {
