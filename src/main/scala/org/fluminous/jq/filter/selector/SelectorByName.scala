@@ -13,7 +13,7 @@ final case class SelectorByName(override val position: Int, field: String, paren
       Right(List(input))
     } else {
       for {
-        childJson <- jsonFromFieldName(input, parentFieldName)
+        childJson <- jsonByFieldName(input, parentFieldName)
         jsonObject <- childJson.asObject.toRight(
                        EvaluationException(position, s"Trying to read field $field from json of type ${input.name}")
                      )

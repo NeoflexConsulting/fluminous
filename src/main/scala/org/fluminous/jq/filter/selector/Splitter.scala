@@ -14,7 +14,7 @@ case class Splitter(override val position: Int, parentFieldName: Option[String] 
       Right(List(input))
     } else {
       for {
-        childJson <- jsonFromFieldName(input, parentFieldName)
+        childJson <- jsonByFieldName(input, parentFieldName)
         result <- childJson.asArray
                    .map(_.toList)
                    .orElse(input.asObject.map(_.toList.map(_._2)))

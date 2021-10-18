@@ -7,7 +7,15 @@ import org.fluminous.jq.filter.Filter
 
 trait SelectorFunctions {
   self: Filter =>
-  protected def jsonFromFieldName(input: Json, parentFieldName: Option[String]): Either[EvaluationException, Json] = {
+
+  protected def getElementByIndex(jsonArray: Vector[Json], index: Int): Json = {
+    val naturalIndex = if (index >= 0) index else jsonArray.length + index
+    jsonArray
+      .lift(naturalIndex)
+      .getOrElse(Null)
+  }
+
+  protected def jsonByFieldName(input: Json, parentFieldName: Option[String]): Either[EvaluationException, Json] = {
     parentFieldName.map(readField(input)).getOrElse(Right(input))
   }
 

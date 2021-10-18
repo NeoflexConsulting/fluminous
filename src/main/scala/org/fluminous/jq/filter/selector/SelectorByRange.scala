@@ -12,7 +12,7 @@ final case class SelectorByRange(override val position: Int, range: Range, paren
       Right(List(input))
     } else {
       for {
-        childJson <- jsonFromFieldName(input, parentFieldName)
+        childJson <- jsonByFieldName(input, parentFieldName)
         result <- childJson.asArray
                    .map(getElementsByRange)
                    .orElse(input.asString.map(getElementsByRange))

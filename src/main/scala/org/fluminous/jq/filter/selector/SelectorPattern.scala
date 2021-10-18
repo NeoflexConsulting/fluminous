@@ -2,13 +2,14 @@ package org.fluminous.jq.filter.selector
 
 import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.algebra.IntegerNumber
-import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, lookup, test }
-import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
-import org.fluminous.jq.tokens.symbolic.{ LeftSquareBracket, QuestionMark, RightSquareBracket, Root }
-import org.fluminous.jq.tokens.{ Identifier, RawString, StringToken }
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{capture, lookup, test}
+import org.fluminous.jq.filter.pattern.{ExpressionPattern, PatternCases}
+import org.fluminous.jq.tokens.symbolic.{LeftSquareBracket, QuestionMark, RightSquareBracket, Root}
+import org.fluminous.jq.tokens.{Identifier, RawString, StringToken}
 import org.fluminous.jq.filter.range.Range
-import shapeless.{ ::, HNil }
+import shapeless.{::, HNil}
 import cats.syntax.option._
+import org.fluminous.jq.filter.json.array.JsonArray
 
 case object SelectorPattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[SelectorByName](
@@ -21,6 +22,9 @@ case object SelectorPattern extends ExpressionPattern {
     (test[RightSquareBracket] ->: capture[IntegerNumber] ->: test[LeftSquareBracket] ->: test[Root]).ifValidReplaceBy {
       case s :: HNil => SelectorByIndex(_, s.value)
     },
+    (capture[JsonArray] ->: test[Root]).ifValidReplaceBy {
+      case a :: HNil => SelectorByIndexArray(_, a.values)
+    },
     (test[RightSquareBracket] ->: test[LeftSquareBracket] ->: test[Root]).ifValidReplaceBy { _ =>
       Splitter(_)
     },
@@ -32,6 +36,9 @@ case object SelectorPattern extends ExpressionPattern {
     },
     (test[RightSquareBracket] ->: capture[IntegerNumber] ->: test[LeftSquareBracket] ->: capture[SelectorByName]).ifValidReplaceBy {
       case s :: parent :: HNil => SelectorByIndex(_, s.value, parent.field.some)
+    },
+    (capture[JsonArray] ->: capture[SelectorByName]).ifValidReplaceBy {
+      case a :: parent :: HNil => SelectorByIndexArray(_, a.values, parent.field.some)
     },
     (test[RightSquareBracket] ->: test[LeftSquareBracket] ->: capture[SelectorByName]).ifValidReplaceBy {
       case parent :: HNil =>
