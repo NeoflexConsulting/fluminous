@@ -4,7 +4,7 @@ import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, lookup, test }
 import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
-import org.fluminous.jq.tokens.symbolic.Comma
+import org.fluminous.jq.tokens.symbolic.{ Comma, LeftSquareBracket }
 import shapeless.{ ::, HNil }
 
 case object FilterSequencePattern extends ExpressionPattern {
@@ -13,7 +13,8 @@ case object FilterSequencePattern extends ExpressionPattern {
       case filter :: pipe :: HNil => FilterSequenceStart(_, filter +: pipe.filters)
     },
     (lookup[Expression]
-      .notInstance[Comma] ->: capture[Filter] ->: capture[FilterSequenceStart]).ifValidReplaceBy {
+      .notInstance[Comma]
+      .notInstance[LeftSquareBracket] ->: capture[Filter] ->: capture[FilterSequenceStart]).ifValidReplaceBy {
       case filter :: pipe :: HNil => FilterSequence(_, (filter +: pipe.filters).reverse)
     },
     (test[Comma] ->: capture[Filter]).ifValidReplaceBy {
