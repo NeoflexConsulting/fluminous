@@ -107,6 +107,26 @@ class IndexingSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll 
         """["a","b","c","d","e"]""",
         List(""""e"""", """"c"""")
       )
+      checkFilter(
+        """.[] | .name""",
+        """[{"name":"JSON", "good":true}, {"name":"XML", "good":false}]""",
+        List(""""JSON"""", """"XML"""")
+      )
+      checkFilter(
+        """(. + 2) * 5""",
+        """1""",
+        """15"""
+      )
+      checkFilter(
+        """[.user, .projects[]]""",
+        """{"user":"stedolan", "projects": ["jq", "wikiflow"]}""",
+        """["stedolan", "jq", "wikiflow"]"""
+      )
+      checkFilter(
+        """[ .[] | . * 2]""",
+        """[1, 2, 3]""",
+        """[2, 4, 6]"""
+      )
     }
   }
 }
