@@ -15,8 +15,7 @@ case class Identifier(override val position: Int, override val value: String) ex
         Right(TokenUpdated(Identifier(position, value :+ c)))
     }
   }
-  override def toString: String    = value
-  override val description: String = toString
+  override val description: String = value
 }
 
 object Identifier {

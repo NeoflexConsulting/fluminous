@@ -1,26 +1,36 @@
 package org.fluminous.jq.filter.json.obj
 
 import cats.syntax.traverse._
+import cats.syntax.apply._
 import io.circe.Json
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{ Description, EvaluationException }
 
-case class JsonObject(override val position: Int, values: Map[String, Filter]) extends Filter {
+case class JsonObject(override val position: Int, values: Map[Filter, Filter]) extends Filter {
   override val isSingleValued: Boolean = true
 
   override def transform(input: Json): Either[EvaluationException, List[Json]] = {
-    values.toList.traverse { case (n, v) => v.transform(input).map(_.map(ev => (n, ev))) }.map(splitByObjects)
+    values.toList.traverse { case (n, v) => (n.transform(input).flatMap(castAsString), v.transform(input)).tupled }
+      .map(splitByObjects)
   }
 
-  private def splitByObjects(lists: List[List[(String, Json)]]): List[Json] = {
+  private def castAsString(jsons: List[Json]): Either[EvaluationException, List[String]] = {
+    jsons
+      .map(v =>
+        v.asString.toRight(EvaluationException(position, s"attribute name must be string, but evaluated to ${v.name}"))
+      )
+      .sequence
+  }
+
+  private def splitByObjects(lists: List[(List[String], List[Json])]): List[Json] = {
     lists.foldLeft(List(io.circe.JsonObject.fromMap(Map.empty)))(addAttributeToObjects).map(Json.fromJsonObject)
   }
 
   private def addAttributeToObjects(
     objects: List[io.circe.JsonObject],
-    attributeValues: List[(String, Json)]
+    attributeValues: (List[String], List[Json])
   ): List[io.circe.JsonObject] = {
-    objects.flatMap(obj => attributeValues.map(_ +: obj))
+    objects.flatMap(obj => attributeValues.tupled.map(_ +: obj))
   }
 
   override val description: String = JsonObject.typeDescription.description

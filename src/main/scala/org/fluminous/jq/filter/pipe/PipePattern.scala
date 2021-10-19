@@ -2,10 +2,10 @@ package org.fluminous.jq.filter.pipe
 
 import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.filter.pattern.dsl.Matcher.{capture, lookup, test}
-import org.fluminous.jq.filter.pattern.{ExpressionPattern, PatternCases}
-import org.fluminous.jq.tokens.symbolic.{Root, VerticalSlash}
-import shapeless.{::, HNil}
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, lookup, test }
+import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
+import org.fluminous.jq.tokens.symbolic.{ Root, VerticalSlash }
+import shapeless.{ ::, HNil }
 case object PipePattern extends ExpressionPattern {
   override val ExpressionCases: PatternCases = PatternCases[Pipe](
     (test[VerticalSlash] ->: capture[Filter] ->: capture[PipeStart]).ifValidReplaceBy {

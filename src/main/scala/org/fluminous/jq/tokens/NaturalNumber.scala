@@ -23,7 +23,6 @@ case class NaturalNumber(override val position: Int, value: String) extends Toke
 
     }
   }
-  override def toString: String    = value
   override val description: String = toString
 
   def intValue: Int = value.toInt

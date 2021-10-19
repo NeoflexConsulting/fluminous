@@ -18,7 +18,7 @@ case class RawString(override val position: Int, override val value: String, fin
       }
     }
   }
-  override def toString: String    = s""""${value}""""
+
   override val description: String = toString
 
   override def transform(input: Json): Either[EvaluationException, List[Json]] = Right(List(Json.fromString(value)))

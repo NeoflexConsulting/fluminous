@@ -25,7 +25,6 @@ case class DecimalNumber(override val position: Int, value: String) extends Toke
 
   def decimalValue: BigDecimal = BigDecimal(value)
 
-  override def toString: String    = value
   override val description: String = toString
 
   override def transform(input: Json): Either[EvaluationException, List[Json]] =

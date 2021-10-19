@@ -132,6 +132,11 @@ class IndexingSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll 
         """{"user":"stedolan","titles":["JQ Primer", "More JQ"]}""",
         List("""{"user":"stedolan", "title": "JQ Primer"}""", """{"user":"stedolan", "title": "More JQ"}""")
       )
+      checkFilter(
+        """{(.user): .titles}""",
+        """{"user":"stedolan","titles":["JQ Primer", "More JQ"]}""",
+        """{"stedolan":["JQ Primer", "More JQ"]}"""
+      )
     }
   }
 }

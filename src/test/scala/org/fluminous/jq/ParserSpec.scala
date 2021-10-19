@@ -4,8 +4,8 @@ import org.fluminous.jq.filter.algebra.IntegerNumber
 import org.fluminous.jq.filter.json.obj.JsonObject
 import org.fluminous.jq.filter.json.array.JsonArray
 import org.fluminous.jq.filter.pipe.Pipe
-import org.fluminous.jq.filter.selector.{IdentitySelector, SelectorByName}
-import org.fluminous.jq.tokens.{DecimalNumber, NaturalNumber, RawString}
+import org.fluminous.jq.filter.selector.{ IdentitySelector, SelectorByName }
+import org.fluminous.jq.tokens.{ DecimalNumber, RawString }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -45,14 +45,14 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonObject(
             1,
-            Map("a" -> IntegerNumber(7, 42), "b" -> DecimalNumber(16, "17.4"))
+            Map(RawString(2, "a") -> IntegerNumber(7, 42), RawString(11, "b") -> DecimalNumber(16, "17.4"))
           )
         )
       )
 
       parse("""{"a": 42, "b": .foo}""") should be(
         Right(
-          JsonObject(1, Map("a" -> IntegerNumber(7, 42), "b" -> SelectorByName(16, "foo")))
+          JsonObject(1, Map(RawString(2, "a") -> IntegerNumber(7, 42), RawString(11, "b") -> SelectorByName(16, "foo")))
         )
       )
 
@@ -60,7 +60,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonObject(
             1,
-            Map("a" -> IntegerNumber(5, 42), "b" -> DecimalNumber(12, "17.4"))
+            Map(RawString(2, "a") -> IntegerNumber(5, 42), RawString(9, "b") -> DecimalNumber(12, "17.4"))
           )
         )
       )
@@ -69,12 +69,15 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonObject(
             1,
-            Map("user" -> SelectorByName(2, "user"), "title" -> SelectorByName(8, "title"))
+            Map(
+              RawString(2, "user")  -> SelectorByName(2, "user"),
+              RawString(8, "title") -> SelectorByName(8, "title")
+            )
           )
         )
       )
       parse(""" {customer:.}""") should be(
-        Right(JsonObject(2, Map("customer" -> IdentitySelector(12))))
+        Right(JsonObject(2, Map(RawString(3, "customer") -> IdentitySelector(12))))
       )
 
       parse("""{customer: {id : .customerId, name, age}}""") should be(
@@ -82,13 +85,13 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
           JsonObject(
             1,
             Map(
-              "customer" ->
+              RawString(2, "customer") ->
                 JsonObject(
                   12,
                   Map(
-                    "id"   -> SelectorByName(18, "customerId"),
-                    "name" -> SelectorByName(31, "name"),
-                    "age"  -> SelectorByName(37, "age")
+                    RawString(13, "id")   -> SelectorByName(18, "customerId"),
+                    RawString(31, "name") -> SelectorByName(31, "name"),
+                    RawString(37, "age")  -> SelectorByName(37, "age")
                   )
                 )
             )
