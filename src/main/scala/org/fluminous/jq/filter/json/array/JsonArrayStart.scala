@@ -1,10 +1,9 @@
 package org.fluminous.jq.filter.json.array
 
 import org.fluminous.jq.filter.Filter
-import org.fluminous.jq.{Description, Expression}
+import org.fluminous.jq.{ Description, Expression }
 
-final case class JsonArrayStart(override val position: Int, values: List[Filter])
-    extends Expression {
+final case class JsonArrayStart(override val position: Int, values: List[Filter]) extends Expression {
   override val description: String = JsonArrayStart.typeDescription.description
 }
 

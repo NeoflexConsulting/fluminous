@@ -10,6 +10,8 @@ import org.fluminous.jq.tokens.symbolic.VerticalSlash
 import io.circe.syntax._
 import cats.syntax.foldable._
 
+import scala.annotation.tailrec
+
 case class RecursiveDescent(override val position: Int) extends Token with Filter {
   override val isSingleValued: Boolean = false
   def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, AppendResult] = {
@@ -23,25 +25,28 @@ case class RecursiveDescent(override val position: Int) extends Token with Filte
     }
   }
   override def transform(input: Json): Either[EvaluationException, List[Json]] = {
-    Right(input.foldWith(jsonFolder).toList)
+    recurse(List(input), List(input)).map(_.reverse)
   }
 
-  private val jsonFolder: Folder[Chain[Json]] = new Folder[Chain[Json]] {
-    override def onNull: Chain[Json] = Chain.empty
-
-    override def onBoolean(value: Boolean): Chain[Json] = Chain(value.asJson)
-
-    override def onNumber(value: JsonNumber): Chain[Json] = Chain(Json.fromJsonNumber(value))
-
-    override def onString(value: String): Chain[Json] = Chain(Json.fromString(value))
-
-    override def onArray(value: Vector[Json]): Chain[Json] = {
-      Json.fromValues(value) +: value.foldMap(_.foldWith(jsonFolder))
+  @tailrec
+  private def recurse(stack: List[Json], output: List[Json]): Either[EvaluationException, List[Json]] = {
+    stack match {
+      case Nil => Right(output)
+      case head :: rest =>
+        val nextJsons = evalNextInputs(head)
+        recurse(nextJsons ++ rest, rest ++ output)
     }
+  }
 
-    override def onObject(value: JsonObject): Chain[Json] = {
-      Json.fromJsonObject(value) +: value.values.map(_.foldWith(jsonFolder)).fold(Chain.empty)(_ ++ _)
-    }
+  private def evalNextInputs(input: Json): List[Json] = {
+    input.fold(
+      List.empty[Json],
+      _ => List.empty[Json],
+      _ => List.empty[Json],
+      _ => List.empty[Json],
+      array => array.toList,
+      obj => obj.values.toList
+    )
   }
 
   override val description: String = """.."""
