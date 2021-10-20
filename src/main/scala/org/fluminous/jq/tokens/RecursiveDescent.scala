@@ -30,11 +30,12 @@ case class RecursiveDescent(override val position: Int) extends Token with Filte
 
   @tailrec
   private def recurse(stack: List[Json], output: List[Json]): Either[EvaluationException, List[Json]] = {
+    println("########## " + stack + "  : " + output)
     stack match {
       case Nil => Right(output)
       case head :: rest =>
         val nextJsons = evalNextInputs(head)
-        recurse(nextJsons ++ rest, rest ++ output)
+        recurse(nextJsons ++ rest, nextJsons ++ output)
     }
   }
 
