@@ -9,9 +9,10 @@ import cats.syntax.traverse._
 final case class Pipe(override val position: Int, filters: List[Filter]) extends Filter {
   override val isSingleValued: Boolean = filters.forall(_.isSingleValued)
   override def transform(input: Json): Either[EvaluationException, List[Json]] = {
-    filters.foldLeftM(List(input)) { (jsonList, filter) =>
-      jsonList.map(filter.transform).flatSequence
-    }
+    filters
+      .foldLeftM(List(input)) { (jsonList, filter) =>
+        jsonList.map(filter.transform).flatSequence.map(_.filterNot(_.isNull))
+      }
   }
   override val description: String = Pipe.typeDescription.description
 }
