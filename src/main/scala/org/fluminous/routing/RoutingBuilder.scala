@@ -6,7 +6,7 @@ import io.serverlessworkflow.api.actions.Action
 import io.serverlessworkflow.api.interfaces.State
 import io.serverlessworkflow.api.states.{ OperationState, SwitchState }
 import org.fluminous.jq.Parser
-import org.fluminous.jq.filter.{ Filter, IdentityFilter }
+import org.fluminous.jq.filter.{ Filter, Identity }
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
@@ -104,10 +104,10 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
       condition           <- state.getDataConditions.asScala.headOption.toRight(ConditionNotFound(state.getName))
       conditionExpression <- Option(condition.getCondition).toRight(ConditionNotFound(state.getName))
       conditionFilter     <- extractFilter(conditionExpression)
-      inputFilter         <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(IdentityFilter))
+      inputFilter         <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(Identity))
       outputFilter <- asOption(state.getStateDataFilter)(_.getOutput)
                        .map(extractFilter)
-                       .getOrElse(Right(IdentityFilter))
+                       .getOrElse(Right(Identity))
       ifTrueStep <- readySteps
                      .get(condition.getTransition.getNextState)
                      .toRight(InvalidStateReference(state.getName, condition.getTransition.getNextState))
@@ -126,41 +126,51 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
     readySteps: Map[String, Json => F[Json]]
   ): Result[(String, Json => F[Json])] = {
     for {
-      actions     <- Option(state.getActions).map(_.asScala.toList).toList.flatten.traverse(readAction(_, services))
-      inputFilter <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(IdentityFilter))
+      actions <- Option(state.getActions)
+                  .map(_.asScala.toList)
+                  .toList
+                  .flatten
+                  .traverse(readAction(_, state.getName, services))
+      inputFilter <- asOption(state.getStateDataFilter)(_.getInput).map(extractFilter).getOrElse(Right(Identity))
       outputFilter <- asOption(state.getStateDataFilter)(_.getOutput)
                        .map(extractFilter)
-                       .getOrElse(Right(IdentityFilter))
+                       .getOrElse(Right(Identity))
       nextStep <- getNextStep(state, readySteps)
     } yield {
       state.getName -> OperationExecutor(state.getName, inputFilter, outputFilter).execute(actions, nextStep) _
     }
   }
 
-  private def readAction(action: Action, services: Map[String, Service[F]]): Result[Json => F[Option[Json]]] = {
+  private def readAction(
+    action: Action,
+    stateName: String,
+    services: Map[String, Service[F]]
+  ): Result[Json => F[Json]] = {
     for {
       arguments    <- readArguments(action)
       functionName = action.getFunctionRef.getRefName
       service      <- services.get(functionName).toRight(ServiceNotFoundException(functionName))
       fromStateDataFilter <- asOption(action.getActionDataFilter)(_.getFromStateData)
                               .map(extractFilter)
-                              .getOrElse(Right(IdentityFilter))
+                              .getOrElse(Right(Identity))
       resultsFilter <- asOption(action.getActionDataFilter)(_.getResults)
                         .map(extractFilter)
-                        .getOrElse(Right(IdentityFilter))
+                        .getOrElse(Right(Identity))
       toStateDataFilter <- asOption(action.getActionDataFilter)(_.getToStateData)
                             .map(extractFilter)
-                            .getOrElse(Right(IdentityFilter))
+                            .getOrElse(Right(Identity))
     } yield {
-      ActionExecutor(arguments, fromStateDataFilter, resultsFilter, toStateDataFilter).execute(service) _
+      ActionExecutor(stateName, functionName, arguments, fromStateDataFilter, resultsFilter, toStateDataFilter).execute(
+        service
+      ) _
     }
   }
 
-  private def readArguments(action: Action): Result[Map[String, Filter]] = {
+  private def readArguments(action: Action): Result[List[(String, Filter)]] = {
     val entries       = action.getFunctionRef.getArguments.fields().asScala.toList
     val arguments     = entries.map(entry => (entry.getKey, entry.getValue.asText()))
     val parsedFilters = arguments.map { case (name, value) => extractFilter(value).map(f => (name, f)) }.sequence
-    parsedFilters.map(_.toMap)
+    parsedFilters
   }
 
   private def getNextStep(state: OperationState, readySteps: Map[String, Json => F[Json]]): Result[Json => F[Json]] = {

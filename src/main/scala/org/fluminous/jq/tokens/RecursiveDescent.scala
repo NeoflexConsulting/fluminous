@@ -1,21 +1,55 @@
 package org.fluminous.jq.tokens
 
-import org.fluminous.jq.{ input, Description, ParserException }
+import cats.data.Chain
+import io.circe.Json.Folder
+import io.circe.{ Json, JsonNumber, JsonObject }
+import org.fluminous.jq.filter.Filter
+import org.fluminous.jq.{ input, Description, EvaluationException, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
+import org.fluminous.jq.tokens.symbolic.VerticalSlash
+import io.circe.syntax._
+import cats.syntax.foldable._
 
-case class RecursiveDescent(override val position: Int) extends Token {
-  def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, Option[Token]] = {
+import scala.annotation.tailrec
+
+case class RecursiveDescent(override val position: Int) extends Token with Filter {
+  override val isSingleValued: Boolean = false
+  def tryAppend(symbol: input.Symbol, position: Int): Either[ParserException, AppendResult] = {
     symbol match {
-      case Character(c) if Token.whitespaceSymbols.contains(c) || c == Pipe.char =>
-        Right(None)
+      case Character(c) if Token.whitespaceSymbols.contains(c) || c == VerticalSlash.char =>
+        Right(TokenConstructed)
       case EOF =>
-        Right(None)
+        Right(TokenConstructed)
       case Character(c) =>
         Left(ParserException(position, s"""Invalid sequence "..$c""""))
     }
   }
-  override def toString: String    = raw"""\\"""
-  override val description: String = toString
+  override def transform(input: Json): Either[EvaluationException, List[Json]] = {
+    recurse(List(input), List.empty).map(_.reverse)
+  }
+
+  @tailrec
+  private def recurse(stack: List[Json], output: List[Json]): Either[EvaluationException, List[Json]] = {
+    stack match {
+      case Nil => Right(output)
+      case head :: rest =>
+        val nextJsons = evalNextInputs(head)
+        recurse(nextJsons ++ rest, head +: output)
+    }
+  }
+
+  private def evalNextInputs(input: Json): List[Json] = {
+    input.fold(
+      List.empty[Json],
+      _ => List.empty[Json],
+      _ => List.empty[Json],
+      _ => List.empty[Json],
+      array => array.toList,
+      obj => obj.values.toList
+    )
+  }
+
+  override val description: String = """.."""
   implicit def typeDescription: Description[RecursiveDescent] = new Description[RecursiveDescent] {
     override val description: String = toString
   }

@@ -5,5 +5,5 @@ import shapeless.HList
 
 case class MatchSuccess[Captured <: HList](
   patternStartPosition: Int,
-  remainingStack: List[Expression],
+  stackTail: List[Expression],
   capturedVariables: Captured)

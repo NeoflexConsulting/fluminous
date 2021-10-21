@@ -4,8 +4,10 @@ import cats.data.NonEmptyList
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.pattern.ExpressionPattern
 import org.fluminous.jq.input.InputProvider
-import org.fluminous.jq.tokens.Token
+import org.fluminous.jq.tokens.{Token, Tokenizer}
 import cats.syntax.foldable._
+import cats.syntax.traverse._
+
 import scala.annotation.tailrec
 import org.slf4j.LoggerFactory
 
@@ -21,9 +23,18 @@ trait Parser extends FoldFunctions {
       case Left(ex) =>
         Left(ex)
       case Right((updatedTokenizer, None)) =>
-        getFilterFromStack(updatedTokenizer, foldStack(state.stack), state.failInfo)
+        foldStack(updatedTokenizer, state.stack) match {
+          case Left(ex) => Left(ex)
+          case Right((tokenizerAfterFold, foldedStack)) =>
+            getFilterFromStack(tokenizerAfterFold, foldedStack, state.failInfo)
+        }
+
       case Right((updatedTokenizer, Some(token))) =>
-        parse(updatedTokenizer, applyTokenToStack(token, state))
+        applyTokenToStack(token, updatedTokenizer, state) match {
+          case Left(ex)                          => Left(ex)
+          case Right((nextTokenizer, nextState)) => parse(nextTokenizer, nextState)
+        }
+
     }
   }
 
@@ -39,6 +50,9 @@ trait Parser extends FoldFunctions {
         Right(filter)
       case expr :: Nil =>
         Left(ParserException(expr.position, s"Unexpected ${expr.description}"))
+      case expr1 :: (filter: Filter) :: _ =>
+        Left(ParserException(expr1.position, s"Unexpected ${expr1.description}"))
+
       case expr1 :: _ :: _ =>
         Left(
           failInfo
@@ -50,27 +64,47 @@ trait Parser extends FoldFunctions {
     }
   }
 
-  private def applyTokenToStack(token: Token, state: ParserState): ParserState = {
+  private def applyTokenToStack(
+    token: Token,
+    tokenizer: Tokenizer,
+    state: ParserState
+  ): Either[ParserException, (Tokenizer, ParserState)] = {
     import ExpressionPattern._
     val newStack = NonEmptyList(token, state.stack)
     val newState = state.copy(stack = newStack.toList)
     logger.debug(printState(newStack, newState.failInfo))
-    val updatedStackOrErrors =
-      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(newStack)).leftMap(_.flatten)
-    updatedStackOrErrors
-      .fold(newState.tokenFailed, s => newState.tokenSucceed(foldStack(s)))
+    for {
+      (nextTokenizer, res) <- firstValidOrAllInvalidsWithEither(patterns, tokenizer)((a, d) =>
+                               a.instantiateOnStack(d, newStack)
+                             )
+      flattenedRes = res.leftMap(_.flatten)
+      e <- flattenedRes.fold(
+            errors => Right((nextTokenizer, newState.tokenFailed(errors))),
+            stack =>
+              foldStack(nextTokenizer, stack).map {
+                case (updatedTokenizer, updatedStack) => (updatedTokenizer, newState.tokenSucceed(updatedStack))
+              }
+          )
+    } yield e
   }
 
   @tailrec
-  private def foldStack(stack: Stack): Stack = {
+  private def foldStack(tokenizer: Tokenizer, stack: Stack): Either[ParserException, (Tokenizer, Stack)] = {
     logger.debug(printStack(stack))
     import ExpressionPattern._
-    val updatedStack = NonEmptyList.fromList(stack).flatMap { nonEmptyStack =>
-      firstValidOrAllInvalids(patterns)(_.instantiateOnStack(nonEmptyStack)).toOption
-    }
+    val updatedStack = NonEmptyList
+      .fromList(stack)
+      .map { nonEmptyStack =>
+        firstValidOrAllInvalidsWithEither(patterns, tokenizer)((a, d) => a.instantiateOnStack(d, nonEmptyStack)).map {
+          case (tokenizer, result) => result.toOption.map((tokenizer, _))
+        }
+      }
+      .sequence
+      .map(_.flatten)
     updatedStack match {
-      case None           => stack
-      case Some(newStack) => foldStack(newStack)
+      case Left(ex)                               => Left(ex)
+      case Right(None)                            => Right((tokenizer, stack))
+      case Right(Some((nextTokenizer, newStack))) => foldStack(nextTokenizer, newStack)
     }
   }
 

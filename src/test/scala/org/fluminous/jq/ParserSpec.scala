@@ -1,8 +1,12 @@
 package org.fluminous.jq
 
-import io.circe.Json
-import org.fluminous.jq.filter.{ JsonArrayTemplate, JsonObjectTemplate, Selector }
-import org.fluminous.jq.tokens.Root
+import org.fluminous.jq.filter.algebra.IntegerNumber
+import org.fluminous.jq.filter.json.obj.JsonObject
+import org.fluminous.jq.filter.json.array.JsonArray
+import org.fluminous.jq.filter.pipe.Pipe
+import org.fluminous.jq.filter.selector.{ IdentitySelector, SelectorByName }
+import org.fluminous.jq.filter.sequence.FilterSequence
+import org.fluminous.jq.tokens.{ DecimalNumber, RawString }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -10,82 +14,89 @@ import org.scalatest.wordspec.AnyWordSpecLike
 class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll with Parser {
   "Parser" should {
     "parse selectors" in {
-      parse(".") should be(Right(Root(1)))
-      parse(".foo") should be(Right(Selector(1, Seq("foo"))))
-      parse(".foo.bar") should be(Right(Selector(1, Seq("foo", "bar"))))
-      parse(".foo|.bar") should be(Right(Selector(1, Seq("foo", "bar"))))
-      parse(".foo|.bar|.baz") should be(Right(Selector(1, Seq("foo", "bar", "baz"))))
-      parse("""."foo$"""") should be(Right(Selector(1, Seq("foo$"))))
+      parse("25") should be(Right(IntegerNumber(1, 25)))
+      parse(".") should be(Right(IdentitySelector(1)))
+      parse(".foo") should be(Right(SelectorByName(1, "foo")))
+      parse(".foo.bar") should be(Right(Pipe(1, List(SelectorByName(1, "foo"), SelectorByName(5, "bar")))))
+      parse(".foo|.bar") should be(Right(Pipe(1, List(SelectorByName(1, "foo"), SelectorByName(6, "bar")))))
+      parse(".foo|.bar|.baz") should be(
+        Right(Pipe(1, List(SelectorByName(1, "foo"), SelectorByName(6, "bar"), SelectorByName(11, "baz"))))
+      )
+      parse("""."foo$"""") should be(Right(SelectorByName(1, "foo$")))
     }
     "parse JSON templates" in {
       parse("[.foo, .bar, .baz]") should be(
         Right(
-          JsonArrayTemplate(
+          JsonArray(
             1,
-            Seq(Right(Selector(2, Seq("foo"))), Right(Selector(8, Seq("bar"))), Right(Selector(14, Seq("baz"))))
-          )
+              FilterSequence(
+                2,
+                List(SelectorByName(2, "foo"), SelectorByName(8, "bar"), SelectorByName(14, "baz"))
+              )
+            )
         )
       )
 
       parse("""[52, "hello", 23.4]""") should be(
         Right(
-          JsonArrayTemplate(
+          JsonArray(
             1,
-            Seq(Left(Json.fromInt(52)), Left(Json.fromString("hello")), Left(Json.fromBigDecimal(BigDecimal("23.4"))))
-          )
+           FilterSequence(2, List(IntegerNumber(2, 52), RawString(6, "hello"), DecimalNumber(15, "23.4"))))
         )
       )
       parse("""{"a": 42, "b": 17.4}""") should be(
         Right(
-          JsonObjectTemplate(
+          JsonObject(
             1,
-            Map("a" -> Left(Json.fromInt(42)), "b" -> Left(Json.fromBigDecimal(BigDecimal("17.4"))))
+            Map(RawString(2, "a") -> IntegerNumber(7, 42), RawString(11, "b") -> DecimalNumber(16, "17.4"))
           )
         )
       )
 
       parse("""{"a": 42, "b": .foo}""") should be(
         Right(
-          JsonObjectTemplate(1, Map("a" -> Left(Json.fromInt(42)), "b" -> Right(Selector(16, Seq("foo")))))
+          JsonObject(1, Map(RawString(2, "a") -> IntegerNumber(7, 42), RawString(11, "b") -> SelectorByName(16, "foo")))
         )
       )
 
       parse("""{a: 42, b: 17.4}""") should be(
         Right(
-          JsonObjectTemplate(
+          JsonObject(
             1,
-            Map("a" -> Left(Json.fromInt(42)), "b" -> Left(Json.fromBigDecimal(BigDecimal("17.4"))))
+            Map(RawString(2, "a") -> IntegerNumber(5, 42), RawString(9, "b") -> DecimalNumber(12, "17.4"))
           )
         )
       )
 
       parse("""{user, title}""") should be(
         Right(
-          JsonObjectTemplate(
+          JsonObject(
             1,
-            Map("user" -> Right(Selector(2, Seq("user"))), "title" -> Right(Selector(8, Seq("title"))))
+            Map(
+              RawString(2, "user")  -> SelectorByName(2, "user"),
+              RawString(8, "title") -> SelectorByName(8, "title")
+            )
           )
         )
       )
       parse(""" {customer:.}""") should be(
-        Right(JsonObjectTemplate(2, Map("customer" -> Right(Root(12)))))
+        Right(JsonObject(2, Map(RawString(3, "customer") -> IdentitySelector(12))))
       )
 
       parse("""{customer: {id : .customerId, name, age}}""") should be(
         Right(
-          JsonObjectTemplate(
+          JsonObject(
             1,
             Map(
-              "customer" -> Right(
-                JsonObjectTemplate(
+              RawString(2, "customer") ->
+                JsonObject(
                   12,
                   Map(
-                    "id"   -> Right(Selector(18, Seq("customerId"))),
-                    "name" -> Right(Selector(31, Seq("name"))),
-                    "age"  -> Right(Selector(37, Seq("age")))
+                    RawString(13, "id")   -> SelectorByName(18, "customerId"),
+                    RawString(31, "name") -> SelectorByName(31, "name"),
+                    RawString(37, "age")  -> SelectorByName(37, "age")
                   )
                 )
-              )
             )
           )
         )

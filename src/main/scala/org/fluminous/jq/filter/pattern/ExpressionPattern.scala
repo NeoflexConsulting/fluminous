@@ -1,18 +1,37 @@
 package org.fluminous.jq.filter.pattern
 
-import cats.data.{ NonEmptyList, Validated }
-import org.fluminous.jq.{ Expression, FoldFunctions }
-import org.fluminous.jq.filter.pattern.dsl.{ MatchFailure, PositionedMatchFailure }
+import cats.data.{NonEmptyList, Validated}
+import org.fluminous.jq.filter.algebra.{AlgebraExpressionPattern, ConstantPattern, IntegerNumberPattern}
+import org.fluminous.jq.filter.functions.FunctionInvocationPattern
+import org.fluminous.jq.filter.json.obj.JsonObjectPattern
+import org.fluminous.jq.filter.json.array.JsonArrayPattern
+import org.fluminous.jq.filter.json.tuple.JsonTupleHeaderPattern
+import org.fluminous.jq.{Expression, FoldFunctions, ParserException}
+import org.fluminous.jq.filter.pattern.dsl.{MatchFailure, PositionedMatchFailure}
+import org.fluminous.jq.filter.pipe.PipePattern
+import org.fluminous.jq.filter.range.RangePattern
+import org.fluminous.jq.filter.selector.SelectorPattern
+import org.fluminous.jq.filter.sequence.FilterSequencePattern
+import org.fluminous.jq.tokens.Tokenizer
 
 trait ExpressionPattern extends FoldFunctions {
-  def instantiateOnStack(stack: NonEmptyList[Expression]): Validated[List[PatternFailure], List[Expression]] = {
-    firstValidOrAllInvalids(ExpressionCases.cases)(p => p.patternCase(stack).leftMap(f => (p, f)))
-      .leftMap(getPatternFailure)
+
+  def instantiateOnStack(
+    tokenizer: Tokenizer,
+    stack: NonEmptyList[Expression]
+  ): Either[ParserException, (Tokenizer, Validated[List[PatternFailure], List[Expression]])] = {
+    for {
+      (finalTokenizer, res) <- firstValidOrAllInvalidsWithEither(ExpressionCases.cases, tokenizer) {
+                                case (p, nextTokenizer) =>
+                                  p.patternCase(MatcherInput(nextTokenizer, stack))
+                                    .map(output => (output.tokenizer, output.result.leftMap(f => (p, f))))
+                              }
+    } yield (finalTokenizer, res.leftMap(getPatternFailure))
   }
 
   private def getPatternFailure(failures: List[(PatternCase, MatchFailure)]): List[PatternFailure] = {
     failures.flatMap {
-      case (patternCase, p @ PositionedMatchFailure(_, _, _, _, overallMismatchesQty))
+      case (patternCase, p @ PositionedMatchFailure(_, _, _, overallMismatchesQty))
           if overallMismatchesQty < patternCase.length =>
         Some(
           PatternFailure(
@@ -32,11 +51,16 @@ trait ExpressionPattern extends FoldFunctions {
 
 object ExpressionPattern {
   val patterns: List[ExpressionPattern] = List(
+    ConstantPattern,
+    IntegerNumberPattern,
+    RangePattern,
     SelectorPattern,
+    PipePattern,
     JsonTupleHeaderPattern,
-    JsonObjectTemplatePattern,
-    JsonObjectTemplateConstructorPattern,
-    JsonArrayTemplatePattern,
-    JsonArrayTemplateConstructorPattern
+    JsonObjectPattern,
+    JsonArrayPattern,
+    AlgebraExpressionPattern,
+    FilterSequencePattern,
+    FunctionInvocationPattern
   )
 }

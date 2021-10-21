@@ -2,20 +2,20 @@ package org.fluminous.jq.tokens
 
 import org.fluminous.jq.{ input, Description, ParserException }
 import org.fluminous.jq.input.{ Character, EOF }
+import org.fluminous.jq.tokens.symbolic.{ AtomicToken, Root }
 
-case class Identifier(override val position: Int, value: String) extends Token {
-  def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, Option[Token]] = {
+case class Identifier(override val position: Int, override val value: String) extends Token with StringToken {
+  def tryAppend(symbol: input.Symbol, symbolPosition: Int): Either[ParserException, AppendResult] = {
     symbol match {
       case EOF =>
-        Right(None)
-      case Character(c) if Token.whitespaceSymbols.contains(c) || SpecialSymbol.symbols.contains(c) || c == Root.char =>
-        Right(None)
+        Right(TokenConstructed)
+      case Character(c) if Token.whitespaceSymbols.contains(c) || AtomicToken.symbols.contains(c) || c == Root.char =>
+        Right(TokenConstructed)
       case Character(c) =>
-        Right(Some(Identifier(position, value :+ c)))
+        Right(TokenUpdated(Identifier(position, value :+ c)))
     }
   }
-  override def toString: String    = value
-  override val description: String = toString
+  override val description: String = value
 }
 
 object Identifier {
