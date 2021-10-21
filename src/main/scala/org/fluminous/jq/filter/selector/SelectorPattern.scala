@@ -2,12 +2,12 @@ package org.fluminous.jq.filter.selector
 
 import org.fluminous.jq.Expression
 import org.fluminous.jq.filter.algebra.IntegerNumber
-import org.fluminous.jq.filter.pattern.dsl.Matcher.{capture, lookup, test}
-import org.fluminous.jq.filter.pattern.{ExpressionPattern, PatternCases}
-import org.fluminous.jq.tokens.symbolic.{LeftSquareBracket, QuestionMark, RightSquareBracket, Root}
-import org.fluminous.jq.tokens.{Identifier, RawString, StringToken}
+import org.fluminous.jq.filter.pattern.dsl.Matcher.{ capture, lookup, test }
+import org.fluminous.jq.filter.pattern.{ ExpressionPattern, PatternCases }
+import org.fluminous.jq.tokens.symbolic.{ LeftSquareBracket, QuestionMark, RightSquareBracket, Root }
+import org.fluminous.jq.tokens.{ Identifier, RawString, StringToken }
 import org.fluminous.jq.filter.range.Range
-import shapeless.{::, HNil}
+import shapeless.{ ::, HNil }
 import cats.syntax.option._
 import org.fluminous.jq.filter.json.array.JsonArray
 
@@ -54,6 +54,9 @@ case object SelectorPattern extends ExpressionPattern {
       case r :: HNil => SuppressErrorSelector(_, r)
     },
     (test[QuestionMark] ->: capture[SelectorByRange]).ifValidReplaceBy {
+      case r :: HNil => SuppressErrorSelector(_, r)
+    },
+    (test[QuestionMark] ->: capture[Splitter]).ifValidReplaceBy {
       case r :: HNil => SuppressErrorSelector(_, r)
     },
     (lookup[Expression]

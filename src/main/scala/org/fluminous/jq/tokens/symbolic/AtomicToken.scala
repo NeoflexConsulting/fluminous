@@ -25,6 +25,7 @@ object AtomicToken {
     Divide.char             -> (Divide(_)),
     Multiply.char           -> (Multiply(_)),
     Modulo.char             -> (Modulo(_)),
-    QuestionMark.char       -> (QuestionMark(_))
+    QuestionMark.char       -> (QuestionMark(_)),
+    SemiColon.char          -> (SemiColon(_))
   )
 }

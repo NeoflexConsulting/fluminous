@@ -18,7 +18,7 @@ object Recurse extends JqFunction with Parser {
   override def invoke(input: Json, parameters: List[Filter], position: Int): Either[EvaluationException, List[Json]] = {
     val filter    = parameters.lift(0).getOrElse(defaultParameters(0))
     val condition = parameters.lift(1).getOrElse(defaultParameters(1))
-    recurse(List(input), filter, condition, position, List(input)).map(_.reverse)
+    recurse(List(input), filter, condition, position, List(input))
   }
 
   @tailrec
@@ -34,7 +34,7 @@ object Recurse extends JqFunction with Parser {
       case head :: rest =>
         evalNextInputs(head, filter, condition, position) match {
           case l @ Left(_) => l
-          case Right(list) => recurse(list ++ rest, filter, condition, position, list ++ output)
+          case Right(list) => recurse(list ++ rest, filter, condition, position, output ++ list)
         }
     }
   }
@@ -54,6 +54,6 @@ object Recurse extends JqFunction with Parser {
                  )
                )
       evResult <- if (bValue) filter.transform(input) else Right(List.empty)
-    } yield evResult
+    } yield evResult.filterNot(_.isNull)
   }
 }

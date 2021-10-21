@@ -1,12 +1,13 @@
 package org.fluminous.jq.filter.pattern
 
-import cats.data.{ NonEmptyList, Validated }
-import org.fluminous.jq.filter.algebra.{ AlgebraExpressionPattern, ConstantPattern, IntegerNumberPattern }
+import cats.data.{NonEmptyList, Validated}
+import org.fluminous.jq.filter.algebra.{AlgebraExpressionPattern, ConstantPattern, IntegerNumberPattern}
+import org.fluminous.jq.filter.functions.FunctionInvocationPattern
 import org.fluminous.jq.filter.json.obj.JsonObjectPattern
 import org.fluminous.jq.filter.json.array.JsonArrayPattern
 import org.fluminous.jq.filter.json.tuple.JsonTupleHeaderPattern
-import org.fluminous.jq.{ Expression, FoldFunctions, ParserException }
-import org.fluminous.jq.filter.pattern.dsl.{ MatchFailure, PositionedMatchFailure }
+import org.fluminous.jq.{Expression, FoldFunctions, ParserException}
+import org.fluminous.jq.filter.pattern.dsl.{MatchFailure, PositionedMatchFailure}
 import org.fluminous.jq.filter.pipe.PipePattern
 import org.fluminous.jq.filter.range.RangePattern
 import org.fluminous.jq.filter.selector.SelectorPattern
@@ -59,6 +60,7 @@ object ExpressionPattern {
     JsonObjectPattern,
     JsonArrayPattern,
     AlgebraExpressionPattern,
-    FilterSequencePattern
+    FilterSequencePattern,
+    FunctionInvocationPattern
   )
 }
