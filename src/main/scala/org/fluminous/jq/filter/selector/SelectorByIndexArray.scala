@@ -5,13 +5,10 @@ import org.fluminous.jq.{ Description, EvaluationException }
 import org.fluminous.jq.filter.Filter
 import cats.syntax.traverse._
 
-case class SelectorByIndexArray(
-  override val position: Int,
-  indexArray: List[Filter],
-  parentFieldName: Option[String] = None)
+case class SelectorByIndexArray(override val position: Int, indexes: Filter, parentFieldName: Option[String] = None)
     extends Filter
     with SelectorFunctions {
-  override val isSingleValued: Boolean = indexArray.length > 1
+  override val isSingleValued: Boolean = indexes.isSingleValued
 
   override def transform(input: Json): Either[EvaluationException, List[Json]] = {
     if (input.isNull) {
@@ -29,7 +26,7 @@ case class SelectorByIndexArray(
 
   private def jsonArrayToIndexArray(input: Json): Either[EvaluationException, List[Int]] = {
     for {
-      evaluatedIndexJsons <- indexArray.map(_.transform(input)).flatSequence
+      evaluatedIndexJsons <- indexes.transform(input)
       indexes <- evaluatedIndexJsons
                   .map(
                     _.asNumber.flatMap(_.toInt).toRight(EvaluationException(position, s"Not all indexes are integers"))

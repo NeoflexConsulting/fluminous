@@ -5,6 +5,7 @@ import org.fluminous.jq.filter.json.obj.JsonObject
 import org.fluminous.jq.filter.json.array.JsonArray
 import org.fluminous.jq.filter.pipe.Pipe
 import org.fluminous.jq.filter.selector.{ IdentitySelector, SelectorByName }
+import org.fluminous.jq.filter.sequence.FilterSequence
 import org.fluminous.jq.tokens.{ DecimalNumber, RawString }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
@@ -28,8 +29,11 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonArray(
             1,
-            List(SelectorByName(2, "foo"), SelectorByName(8, "bar"), SelectorByName(14, "baz"))
-          )
+              FilterSequence(
+                2,
+                List(SelectorByName(2, "foo"), SelectorByName(8, "bar"), SelectorByName(14, "baz"))
+              )
+            )
         )
       )
 
@@ -37,8 +41,7 @@ class ParserSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll wi
         Right(
           JsonArray(
             1,
-            List(IntegerNumber(2, 52), RawString(6, "hello"), DecimalNumber(15, "23.4"))
-          )
+           FilterSequence(2, List(IntegerNumber(2, 52), RawString(6, "hello"), DecimalNumber(15, "23.4"))))
         )
       )
       parse("""{"a": 42, "b": 17.4}""") should be(

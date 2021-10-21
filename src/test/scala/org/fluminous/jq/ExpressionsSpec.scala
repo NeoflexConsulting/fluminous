@@ -216,6 +216,11 @@ class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterA
         """null""",
         """[false, true]"""
       )
+      checkFilter(
+        """[true, (false | not)]""",
+        """null""",
+        """[true, true]"""
+      )
     }
   }
 }
