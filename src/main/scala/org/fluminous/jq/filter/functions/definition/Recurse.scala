@@ -18,7 +18,7 @@ object Recurse extends JqFunction with Parser {
   override def invoke(input: Json, parameters: List[Filter], position: Int): Either[EvaluationException, List[Json]] = {
     val filter    = parameters.lift(0).getOrElse(defaultParameters(0))
     val condition = parameters.lift(1).getOrElse(defaultParameters(1))
-    recurse(List(input), filter, condition, position, List(input))
+    recurse(List(input), filter, condition, position, List.empty).map(_.reverse)
   }
 
   @tailrec
@@ -33,8 +33,9 @@ object Recurse extends JqFunction with Parser {
       case Nil => Right(output)
       case head :: rest =>
         evalNextInputs(head, filter, condition, position) match {
-          case l @ Left(_) => l
-          case Right(list) => recurse(list ++ rest, filter, condition, position, output ++ list)
+          case Left(ex)             => Left(ex)
+          case Right((false, list)) => recurse(list ++ rest, filter, condition, position, output)
+          case Right((true, list))  => recurse(list ++ rest, filter, condition, position, head +: output)
         }
     }
   }
@@ -44,7 +45,7 @@ object Recurse extends JqFunction with Parser {
     filter: Filter,
     condition: Filter,
     position: Int
-  ): Either[EvaluationException, List[Json]] = {
+  ): Either[EvaluationException, (Boolean, List[Json])] = {
     for {
       evCondition <- condition.transformToSingleJson(input)
       bValue <- evCondition.asBoolean.toRight(
@@ -54,6 +55,6 @@ object Recurse extends JqFunction with Parser {
                  )
                )
       evResult <- if (bValue) filter.transform(input) else Right(List.empty)
-    } yield evResult.filterNot(_.isNull)
+    } yield (bValue, evResult.filterNot(_.isNull))
   }
 }

@@ -25,7 +25,7 @@ case class RecursiveDescent(override val position: Int) extends Token with Filte
     }
   }
   override def transform(input: Json): Either[EvaluationException, List[Json]] = {
-    recurse(List(input), List(input))
+    recurse(List(input), List.empty).map(_.reverse)
   }
 
   @tailrec
@@ -34,7 +34,7 @@ case class RecursiveDescent(override val position: Int) extends Token with Filte
       case Nil => Right(output)
       case head :: rest =>
         val nextJsons = evalNextInputs(head)
-        recurse(nextJsons ++ rest, output ++ nextJsons)
+        recurse(nextJsons ++ rest, head +: output)
     }
   }
 
