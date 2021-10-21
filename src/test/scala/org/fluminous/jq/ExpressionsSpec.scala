@@ -7,7 +7,6 @@ import org.scalatest.wordspec.AnyWordSpecLike
 class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll with TestFunctions {
   "Filters" should {
     "Evaluate arithmetic expressions" in {
-
       checkFilter(
         ".a + 2*4",
         """{"a": 7}""",
@@ -70,8 +69,13 @@ class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterA
       )
       checkFilter(
         """{"k": {"a": 1, "b": 2}} * {"k": {"a": 0,"c": 3}}""",
-        """"null"""",
+        """null""",
         """{"k": {"a": 0, "b": 2, "c": 3}}"""
+      )
+      checkFilter(
+        """.[] | (1 / .)?""",
+        """[1,0,-1]""",
+        List("""1""", """-1""")
       )
     }
 

@@ -9,6 +9,7 @@ import org.fluminous.jq.tokens.{ Identifier, RawString, StringToken }
 import org.fluminous.jq.filter.range.Range
 import shapeless.{ ::, HNil }
 import cats.syntax.option._
+import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.filter.json.array.JsonArray
 
 case object SelectorPattern extends ExpressionPattern {
@@ -47,17 +48,8 @@ case object SelectorPattern extends ExpressionPattern {
     (capture[Range] ->: capture[SelectorByName]).ifValidReplaceBy {
       case r :: parent :: HNil => SelectorByRange(_, r, parent.field.some)
     },
-    (test[QuestionMark] ->: capture[SelectorByName]).ifValidReplaceBy {
-      case r :: HNil => SuppressErrorSelector(_, r)
-    },
-    (test[QuestionMark] ->: capture[SelectorByIndex]).ifValidReplaceBy {
-      case r :: HNil => SuppressErrorSelector(_, r)
-    },
-    (test[QuestionMark] ->: capture[SelectorByRange]).ifValidReplaceBy {
-      case r :: HNil => SuppressErrorSelector(_, r)
-    },
-    (test[QuestionMark] ->: capture[Splitter]).ifValidReplaceBy {
-      case r :: HNil => SuppressErrorSelector(_, r)
+    (test[QuestionMark] ->: capture[Filter]).ifValidReplaceBy {
+      case f :: HNil => SuppressErrorSelector(_, f)
     },
     (lookup[Expression]
       .notInstance[StringToken]
