@@ -81,6 +81,11 @@ class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterA
 
     "Evaluate relational expressions" in {
       checkFilter(
+        """.[] == 1""",
+        """[1, 1.0, "1", "banana"]""",
+        List("""true""", """true""", """false""", """false""")
+      )
+      checkFilter(
         """. == 1""",
         """1""",
         """true"""
@@ -187,6 +192,29 @@ class ExpressionsSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterA
         ".foo.bar.baz > 3 and .foo.bar.baz < 10",
         """{"foo":{"bar":{"baz":12,"sd":false}},"d":true}""",
         """false"""
+      )
+
+      checkFilter(
+        """42 and "a string"""",
+        """null""",
+        """true"""
+      )
+
+      checkFilter(
+        """(true, false) or false""",
+        """null""",
+        List("""true""", """false""")
+      )
+
+      checkFilter(
+        """(true, true) and (true, false)""",
+        """null""",
+        List("""true""", """false""", """true""", """false""")
+      )
+      checkFilter(
+        """[true, false | not]""",
+        """null""",
+        """[false, true]"""
       )
     }
   }
