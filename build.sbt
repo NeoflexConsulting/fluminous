@@ -1,4 +1,4 @@
-name := "flumen"
+name := "fluminous"
 
 version := "0.1"
 
