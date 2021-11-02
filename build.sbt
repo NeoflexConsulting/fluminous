@@ -1,3 +1,4 @@
+organization := "org.fluminous"
 name := "fluminous"
 
 version := "0.1"
