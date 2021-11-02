@@ -6,7 +6,9 @@ import io.circe.Json
 import org.fluminous.jq.filter.Filter
 import org.fluminous.jq.{ Description, EvaluationException }
 
-case class JsonObject(override val position: Int, values: Map[Filter, Filter]) extends Filter {
+import scala.collection.immutable.ListMap
+
+case class JsonObject(override val position: Int, values: ListMap[Filter, Filter]) extends Filter {
   override val isSingleValued: Boolean = true
 
   override def transform(input: Json): Either[EvaluationException, List[Json]] = {
@@ -30,7 +32,7 @@ case class JsonObject(override val position: Int, values: Map[Filter, Filter]) e
     objects: List[io.circe.JsonObject],
     attributeValues: (List[String], List[Json])
   ): List[io.circe.JsonObject] = {
-    objects.flatMap(obj => attributeValues.tupled.map(_ +: obj))
+    objects.flatMap(obj => attributeValues.tupled.map(v => obj.add(v._1, v._2)))
   }
 
   override val description: String = JsonObject.typeDescription.description

@@ -16,7 +16,7 @@ object TestExample {
     import io.circe.generic.auto._
     val serviceCollection =
       ServiceCollection[Either[Throwable, *]]()
-        .addSyncService[Int, Int, Boolean]("isSame", _ == _, "input1", "input2")
+        .addSyncFunctionService[Int, Int, Boolean]("isSame", _ == _, "input1", "input2")
     val json     = Source.fromResource("RESTRouting.json").mkString
     val settings = Settings(Map("CustomerService.json" -> "localhost:8080"))
     serviceCollection
@@ -35,16 +35,16 @@ object TestExample {
     import io.circe.generic.auto._
     val serviceCollection =
       ServiceCollection[Either[Throwable, *]]()
-        .addSyncService[String, String]("upper", _.toUpperCase, "input")
-        .addSyncService[Int, Int]("increment", _ + 1, "input")
-        .addSyncService[Int, String]("to_string", _.toString, "input")
-        .addSyncService[String, Int]("to_int", _.toInt, "input")
-        .addSyncService[Customer, Int]("get_age", _.age, "input")
-        .addSyncService[Customer, String]("get_name", _.name, "input")
-        .addSyncService[Customer, Customer]("increase_age", c => c.copy(age = c.age + 1), "input")
-        .addSyncService[Int, Customer]("get_customer_by_age", age => Customer("testCustomer", age), "input")
-        .addSyncService[String, Customer]("get_customer_by_name", name => Customer(name, 25), "input")
-        .addSyncService[String, Boolean]("is_number", _.forall(_.isDigit), "input")
+        .addSyncFunctionService[String, String]("upper", _.toUpperCase, "input")
+        .addSyncFunctionService[Int, Int]("increment", _ + 1, "input")
+        .addSyncFunctionService[Int, String]("to_string", _.toString, "input")
+        .addSyncFunctionService[String, Int]("to_int", _.toInt, "input")
+        .addSyncFunctionService[Customer, Int]("get_age", _.age, "input")
+        .addSyncFunctionService[Customer, String]("get_name", _.name, "input")
+        .addSyncFunctionService[Customer, Customer]("increase_age", c => c.copy(age = c.age + 1), "input")
+        .addSyncFunctionService[Int, Customer]("get_customer_by_age", age => Customer("testCustomer", age), "input")
+        .addSyncFunctionService[String, Customer]("get_customer_by_name", name => Customer(name, 25), "input")
+        .addSyncFunctionService[String, Boolean]("is_number", _.forall(_.isDigit), "input")
 
     val json     = Source.fromResource("Routing.json").mkString
     val settings = Settings(Map("CustomerService.json" -> "localhost:8080"))

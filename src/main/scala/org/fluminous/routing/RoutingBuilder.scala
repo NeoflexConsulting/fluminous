@@ -1,34 +1,31 @@
 package org.fluminous.routing
 
-import cats.{ Monad, MonadThrow }
+import cats.{Monad, MonadThrow}
 import io.serverlessworkflow.api.Workflow
 import io.serverlessworkflow.api.actions.Action
 import io.serverlessworkflow.api.interfaces.State
-import io.serverlessworkflow.api.states.{ OperationState, SwitchState }
+import io.serverlessworkflow.api.states.{OperationState, SwitchState}
 import org.fluminous.jq.Parser
-import org.fluminous.jq.filter.{ Filter, Identity }
+import org.fluminous.jq.filter.{Filter, Identity}
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import cats.syntax.traverse._
+import com.fasterxml.jackson.core.util.JsonGeneratorDelegate
+import com.fasterxml.jackson.core.{JsonFactory, JsonGenerator}
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import io.circe.Json
 import io.serverlessworkflow.api.functions.FunctionDefinition
 import io.serverlessworkflow.api.workflow.Functions
 import io.swagger.parser.OpenAPIParser
-import io.swagger.v3.oas.models.{ OpenAPI, Operation }
+import io.swagger.v3.oas.models.{OpenAPI, Operation}
 import io.swagger.v3.oas.models.PathItem.HttpMethod
 import org.fluminous.Settings
-import org.fluminous.runtime.{ ActionExecutor, OperationExecutor, SwitchExecutor }
+import org.fluminous.runtime.{ActionExecutor, OperationExecutor, SwitchExecutor}
 import org.fluminous.services.Service
-import org.fluminous.services.rest.{
-  DeleteService,
-  EndpointTemplate,
-  GetService,
-  HttpBackend,
-  PostService,
-  PutService,
-  RestService
-}
+import org.fluminous.services.rest.{DeleteService, EndpointTemplate, GetService, HttpBackend, PostService, PutService, RestService}
+
+import java.io.ByteArrayOutputStream
 
 class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String, Service[F]], settings: Settings)
     extends Parser
@@ -168,9 +165,33 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
 
   private def readArguments(action: Action): Result[List[(String, Filter)]] = {
     val entries       = action.getFunctionRef.getArguments.fields().asScala.toList
-    val arguments     = entries.map(entry => (entry.getKey, entry.getValue.asText()))
-    val parsedFilters = arguments.map { case (name, value) => extractFilter(value).map(f => (name, f)) }.sequence
+    val arguments     = entries.map(entry => (entry.getKey, filterFromJsonNode(entry.getValue)))
+    val parsedFilters = arguments.map { case (name, value) => value.map(f => (name, f)) }.sequence
     parsedFilters
+  }
+
+  private def filterFromJsonNode(json: JsonNode): Result[Filter] = {
+    if (json.isValueNode) {
+      extractFilter(json.asText())
+    } else {
+      val objectMapper = new ObjectMapper()
+      val buffer       = new ByteArrayOutputStream()
+      val generator    = new JsonFactory().createGenerator(buffer)
+      objectMapper.writeValue(new GeneratorDelegate(generator), json)
+      val modifiedJson = new String(buffer.toByteArray, "UTF-8")
+      parse(modifiedJson).left.map(JqParserError(modifiedJson, _))
+    }
+  }
+
+  class GeneratorDelegate(delegate: JsonGenerator) extends JsonGeneratorDelegate(delegate) {
+    override def writeString(text: String): Unit = {
+      val trimmed = text.trim
+      if (!trimmed.startsWith("${") || !trimmed.endsWith("}")) {
+        super.writeString(trimmed)
+      } else {
+        super.writeRawValue(trimmed.substring(2).dropRight(1))
+      }
+    }
   }
 
   private def getNextStep(state: OperationState, readySteps: Map[String, Json => F[Json]]): Result[Json => F[Json]] = {
@@ -205,7 +226,12 @@ class RoutingBuilder[F[_]: MonadThrow: HttpBackend](builtInServices: Map[String,
   }
 
   private def getServices(functions: Functions): Result[Map[String, Service[F]]] = {
-    functions.getFunctionDefs.asScala.toList.filter(isRest).traverse(getService).map(_.toMap)
+    Option(functions)
+      .map(_.getFunctionDefs.asScala.toList)
+      .getOrElse(List.empty)
+      .filter(isRest)
+      .traverse(getService)
+      .map(_.toMap)
   }
 
   private def getService(functionDef: FunctionDefinition): Result[(String, Service[F])] = {

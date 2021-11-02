@@ -18,7 +18,7 @@ object TestAsyncExample {
     import io.circe.generic.auto._
     val serviceCollection =
       ServiceCollection[Future]()
-        .addSyncService[Int, Int, Boolean]("isSame", _ == _, "input1", "input2")
+        .addSyncFunctionService[Int, Int, Boolean]("isSame", _ == _, "input1", "input2")
     val json     = Source.fromResource("RESTRouting.json").mkString
     val settings = Settings(Map("CustomerService.json" -> "localhost:8080"))
     serviceCollection
@@ -42,16 +42,16 @@ object TestAsyncExample {
     import io.circe.generic.auto._
     val serviceCollection =
       ServiceCollection[Future]()
-        .addService[String, String]("upper", wrapToAsync(_.toUpperCase), "input")
-        .addService[Int, Int]("increment", wrapToAsync(_ + 1), "input")
-        .addService[Int, String]("to_string", wrapToAsync(_.toString), "input")
-        .addService[String, Int]("to_int", wrapToAsync(_.toInt), "input")
-        .addService[Customer, Int]("get_age", wrapToAsync(_.age), "input")
-        .addService[Customer, String]("get_name", wrapToAsync(_.name), "input")
-        .addService[Customer, Customer]("increase_age", wrapToAsync(c => c.copy(age = c.age + 1)), "input")
-        .addService[Int, Customer]("get_customer_by_age", wrapToAsync(age => Customer("testCustomer", age)), "input")
-        .addService[String, Customer]("get_customer_by_name", wrapToAsync(name => Customer(name, 25)), "input")
-        .addService[String, Boolean]("is_number", wrapToAsync(_.forall(_.isDigit)), "input")
+        .addFunctionService[String, String]("upper", wrapToAsync(_.toUpperCase), "input")
+        .addFunctionService[Int, Int]("increment", wrapToAsync(_ + 1), "input")
+        .addFunctionService[Int, String]("to_string", wrapToAsync(_.toString), "input")
+        .addFunctionService[String, Int]("to_int", wrapToAsync(_.toInt), "input")
+        .addFunctionService[Customer, Int]("get_age", wrapToAsync(_.age), "input")
+        .addFunctionService[Customer, String]("get_name", wrapToAsync(_.name), "input")
+        .addFunctionService[Customer, Customer]("increase_age", wrapToAsync(c => c.copy(age = c.age + 1)), "input")
+        .addFunctionService[Int, Customer]("get_customer_by_age", wrapToAsync(age => Customer("testCustomer", age)), "input")
+        .addFunctionService[String, Customer]("get_customer_by_name", wrapToAsync(name => Customer(name, 25)), "input")
+        .addFunctionService[String, Boolean]("is_number", wrapToAsync(_.forall(_.isDigit)), "input")
 
     val json     = Source.fromResource("Routing.json").mkString
     val settings = Settings(Map("CustomerService.json" -> "localhost:8080"))

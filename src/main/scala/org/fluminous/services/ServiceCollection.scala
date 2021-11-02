@@ -13,34 +13,34 @@ import org.fluminous.services.rest.HttpBackend
 
 case class ServiceCollection[F[_]: MonadThrow: HttpBackend] private (private val services: Map[String, Service[F]]) {
 
-  def addSyncService[IN: Decoder, OUT: Encoder](
+  def addSyncFunctionService[IN: Decoder, OUT: Encoder](
     serviceName: String,
     func: IN => OUT,
     parameterName: String
   ): ServiceCollection[F] =
-    addService[IN, OUT](serviceName, i => MonadThrow[F].pure(func(i)), parameterName)
+    addFunctionService[IN, OUT](serviceName, i => MonadThrow[F].pure(func(i)), parameterName)
 
-  def addSyncService[IN1: Decoder, IN2: Decoder, OUT: Encoder](
+  def addSyncFunctionService[IN1: Decoder, IN2: Decoder, OUT: Encoder](
     serviceName: String,
     func: (IN1, IN2) => OUT,
     parameter1Name: String,
     parameter2Name: String
   ): ServiceCollection[F] =
-    addService[IN1, IN2, OUT](
+    addFunctionService[IN1, IN2, OUT](
       serviceName,
       (i, j) => MonadThrow[F].pure(func(i, j)),
       parameter1Name,
       parameter2Name
     )
 
-  def addSyncService[IN1: Decoder, IN2: Decoder, IN3: Decoder, OUT: Encoder](
+  def addSyncFunctionService[IN1: Decoder, IN2: Decoder, IN3: Decoder, OUT: Encoder](
     serviceName: String,
     func: (IN1, IN2, IN3) => OUT,
     parameter1Name: String,
     parameter2Name: String,
     parameter3Name: String
   ): ServiceCollection[F] =
-    addService[IN1, IN2, IN3, OUT](
+    addFunctionService[IN1, IN2, IN3, OUT](
       serviceName,
       (i, j, k) => MonadThrow[F].pure(func(i, j, k)),
       parameter1Name,
@@ -48,7 +48,7 @@ case class ServiceCollection[F[_]: MonadThrow: HttpBackend] private (private val
       parameter3Name
     )
 
-  def addService[IN: Decoder, OUT: Encoder](
+  def addFunctionService[IN: Decoder, OUT: Encoder](
     serviceName: String,
     func: IN => F[OUT],
     parameterName: String
@@ -61,7 +61,7 @@ case class ServiceCollection[F[_]: MonadThrow: HttpBackend] private (private val
     )
   }
 
-  def addService[IN1: Decoder, IN2: Decoder, OUT: Encoder](
+  def addFunctionService[IN1: Decoder, IN2: Decoder, OUT: Encoder](
     serviceName: String,
     func: (IN1, IN2) => F[OUT],
     parameter1Name: String,
@@ -75,7 +75,7 @@ case class ServiceCollection[F[_]: MonadThrow: HttpBackend] private (private val
     )
   }
 
-  def addService[IN1: Decoder, IN2: Decoder, IN3: Decoder, OUT: Encoder](
+  def addFunctionService[IN1: Decoder, IN2: Decoder, IN3: Decoder, OUT: Encoder](
     serviceName: String,
     func: (IN1, IN2, IN3) => F[OUT],
     parameter1Name: String,
@@ -87,6 +87,12 @@ case class ServiceCollection[F[_]: MonadThrow: HttpBackend] private (private val
         serviceName,
         new FunctionService3[F, IN1, IN2, IN3, OUT](serviceName, func, parameter1Name, parameter2Name, parameter3Name)
       )
+    )
+  }
+
+  def addService(service: Service[F]): ServiceCollection[F] = {
+    ServiceCollection(
+      this.services.updated(service.name, service)
     )
   }
 

@@ -2,7 +2,7 @@ package org.fluminous.services
 
 import io.circe.{ DecodingFailure, ParsingFailure }
 
-sealed abstract class ServiceException private (val serviceName: String, message: String, cause: Throwable)
+sealed class ServiceException private (val serviceName: String, message: String, cause: Throwable)
     extends Exception(message, cause) {
   def this(serviceName: String, message: String) = {
     this(serviceName, s"Error during service $serviceName invocation: $message", null)
@@ -48,6 +48,15 @@ case class UnsuccessfulHttpStatusCode(override val serviceName: String, url: Str
 
 case class HttpInvocationError(override val serviceName: String, error: Throwable)
     extends ServiceException(serviceName, error)
+
+case class ParsingError(
+  override val serviceName: String,
+  parsingError: ParsingFailure)
+  extends ServiceException(
+    serviceName,
+    s"""Error occurred while parsing response ${parsingError.message}"""
+  )
+
 
 case class ParsingResponseError(
   override val serviceName: String,
